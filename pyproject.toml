@@ -1,0 +1,19 @@
+[build-system]
+requires = [
+    "scikit-build-core>=0.10",
+    "pybind11>=2.13",
+]
+build-backend = "scikit_build_core.build"
+
+[project]
+name = "oaa"
+version = "0.1.0"
+description = "Personal local-first GenAI runtime"
+requires-python = ">=3.10"
+
+[project.optional-dependencies]
+test = ["pytest>=8.0"]
+
+[tool.scikit-build]
+wheel.packages = ["python/oaa"]
+cmake.build-type = "Release"

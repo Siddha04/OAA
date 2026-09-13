@@ -1,0 +1,41 @@
+# Build artifacts
+build/
+out/
+cmake-build-*/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+venv_gpu/
+
+# Native binaries
+*.dll
+*.so
+*.dylib
+*.pyd
+*.exe
+*.obj
+*.lib
+
+# IDE
+.vscode/
+.idea/
+*.user
+*.suo
+
+# Models and datasets
+models/
+datasets/
+*.gguf
+*.safetensors
+*.bin
+
+# OS
+.DS_Store
+Thumbs.db

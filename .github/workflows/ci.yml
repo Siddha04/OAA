@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  python-cpp-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install build and test dependencies
+        run: python -m pip install --upgrade pip scikit-build-core pybind11 pytest
+
+      - name: Configure C++ core
+        run: cmake -S . -B build -DOAA_BUILD_PYTHON_BINDINGS=OFF -DBUILD_TESTING=ON
+
+      - name: Build C++ core
+        run: cmake --build build --config Release
+
+      - name: Run C++ tests
+        run: ctest --test-dir build --output-on-failure -C Release
+
+      - name: Build Python package
+        run: python -m pip install .
+
+      - name: Run Python tests
+        run: python -m pytest tests/python -q
