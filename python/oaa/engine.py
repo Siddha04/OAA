@@ -1,24 +1,49 @@
 from __future__ import annotations
 
+from collections.abc import Iterator
 from typing import Any
 
 import oaa_cpp
 
+from .config import GenerationConfig
+
 
 class Engine:
-    """Small Python facade over the C++ runtime."""
+    """Stable Python facade over the native OAA runtime."""
 
     def __init__(self) -> None:
         self._runtime = oaa_cpp.Engine()
 
     def load_model(self, path: str) -> bool:
+        if not isinstance(path, str) or not path.strip():
+            raise ValueError("model path must be a non-empty string")
         return bool(self._runtime.load_model(path))
 
     def unload(self) -> None:
         self._runtime.unload()
 
-    def generate(self, prompt: str) -> str:
-        return str(self._runtime.generate(prompt))
+    def generate(
+        self,
+        prompt: str,
+        config: GenerationConfig | None = None,
+    ) -> str:
+        if not isinstance(prompt, str):
+            raise TypeError("prompt must be a string")
+
+        cfg = config or GenerationConfig()
+        return str(self._runtime.generate(prompt, cfg.to_cpp()))
+
+    def generate_stream(
+        self,
+        prompt: str,
+        config: GenerationConfig | None = None,
+    ) -> Iterator[str]:
+        if not isinstance(prompt, str):
+            raise TypeError("prompt must be a string")
+
+        cfg = config or GenerationConfig()
+        for chunk in self._runtime.generate_stream(prompt, cfg.to_cpp()):
+            yield str(chunk)
 
     def status(self) -> str:
         return str(self._runtime.status())

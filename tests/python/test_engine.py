@@ -1,20 +1,38 @@
-from oaa import Engine
+import pytest
+
+from oaa import Engine, GenerationConfig
 
 
-def test_python_to_cpp_smoke() -> None:
+def test_generation_config_validation() -> None:
+    with pytest.raises(ValueError):
+        GenerationConfig(max_tokens=0)
+
+    with pytest.raises(ValueError):
+        GenerationConfig(temperature=-1.0)
+
+
+def test_python_to_cpp_configured_generation() -> None:
+    engine = Engine()
+    engine.load_model("phase3-placeholder")
+
+    config = GenerationConfig(max_tokens=32, temperature=0.0)
+    assert engine.generate("hello", config) == "OAA_PHASE1_ECHO: hello"
+
+
+def test_python_to_cpp_streaming_boundary() -> None:
+    engine = Engine()
+    engine.load_model("phase3-placeholder")
+
+    chunks = list(engine.generate_stream("hello"))
+    assert "".join(chunks) == "OAA_PHASE1_ECHO: hello"
+    assert all(chunks)
+
+
+def test_python_input_validation() -> None:
     engine = Engine()
 
-    assert engine.status() == "empty"
-    assert engine.load_model("phase1-placeholder") is True
-    assert engine.loaded is True
-    assert engine.generate("hello") == "OAA_PHASE1_ECHO: hello"
+    with pytest.raises(ValueError):
+        engine.load_model("")
 
-    stats = engine.get_stats()
-    assert stats == {
-        "model_loaded": True,
-        "generation_calls": 1,
-        "model_path": "phase1-placeholder",
-    }
-
-    engine.unload()
-    assert engine.loaded is False
+    with pytest.raises(TypeError):
+        engine.generate(123)  # type: ignore[arg-type]

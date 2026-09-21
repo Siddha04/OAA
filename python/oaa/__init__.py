@@ -1,6 +1,7 @@
 """Python interface for the OAA runtime."""
 
+from .config import GenerationConfig
 from .engine import Engine
 
-__all__ = ["Engine"]
-__version__ = "0.1.0"
+__all__ = ["Engine", "GenerationConfig"]
+__version__ = "0.2.0"

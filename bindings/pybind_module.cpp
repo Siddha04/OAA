@@ -6,7 +6,7 @@
 namespace py = pybind11;
 
 PYBIND11_MODULE(oaa_cpp, m) {
-    m.doc() = "OAA C++ runtime Phase 1 binding";
+    m.doc() = "OAA C++ runtime Python binding";
 
     py::class_<oaa::GenerationConfig>(m, "GenerationConfig")
         .def(py::init<>())
@@ -22,8 +22,16 @@ PYBIND11_MODULE(oaa_cpp, m) {
         .def(py::init<>())
         .def("load_model", &oaa::Engine::load_model, py::arg("path"))
         .def("unload", &oaa::Engine::unload)
-        .def("generate", &oaa::Engine::generate,
-             py::arg("prompt"), py::arg("config") = oaa::GenerationConfig{})
+        .def(
+            "generate",
+            &oaa::Engine::generate,
+            py::arg("prompt"),
+            py::arg("config") = oaa::GenerationConfig{})
+        .def(
+            "generate_stream",
+            &oaa::Engine::generate_stream,
+            py::arg("prompt"),
+            py::arg("config") = oaa::GenerationConfig{})
         .def("get_stats", &oaa::Engine::get_stats)
         .def("loaded", &oaa::Engine::loaded)
         .def("status", &oaa::Engine::status);

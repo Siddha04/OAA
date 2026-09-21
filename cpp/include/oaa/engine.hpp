@@ -1,16 +1,27 @@
 #pragma once
 
 #include "oaa/types.hpp"
+
 #include <string>
+#include <vector>
 
 namespace oaa {
 
 class Engine {
 public:
     Engine() = default;
+
     bool load_model(const std::string& path);
     void unload();
-    std::string generate(const std::string& prompt, const GenerationConfig& config = {});
+
+    std::string generate(
+        const std::string& prompt,
+        const GenerationConfig& config = {});
+
+    std::vector<std::string> generate_stream(
+        const std::string& prompt,
+        const GenerationConfig& config = {});
+
     RuntimeStats get_stats() const;
     bool loaded() const;
     std::string status() const;
