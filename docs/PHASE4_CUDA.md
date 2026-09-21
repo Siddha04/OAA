@@ -10,7 +10,7 @@ The CPU runtime remains the portability baseline. A normal build continues to us
 
 - CMake option: `OAA_BUILD_CUDA`, default `OFF`.
 - CUDA device detection through the native runtime.
-- RAII-style cleanup for CUDA allocations on both success and exception paths.
+- Exception-safe cleanup for CUDA allocations on both success and failure paths.
 - First real GPU kernel: element-wise float32 vector addition.
 - C++ and Python tests that execute the GPU kernel when a CUDA device is available.
 - Python status functions for build-time CUDA support and runtime device availability.
