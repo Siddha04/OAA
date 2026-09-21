@@ -9,6 +9,11 @@ option(OAA_BUILD_PYTHON_BINDINGS "Build the pybind11 Python module" ON)
 
 add_library(oaa_core STATIC
     cpp/src/engine.cpp
+    cpp/src/tensor.cpp
+    cpp/src/memory.cpp
+    cpp/src/tokenizer.cpp
+    cpp/src/model.cpp
+    cpp/src/inference.cpp
 )
 
 set_target_properties(oaa_core PROPERTIES
@@ -17,7 +22,7 @@ set_target_properties(oaa_core PROPERTIES
 
 target_include_directories(oaa_core
     PUBLIC
-        ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include
+        cpp/include
 )
 
 if(MSVC)
@@ -27,12 +32,23 @@ else()
 endif()
 
 include(CTest)
+
 if(BUILD_TESTING)
     add_executable(oaa_cpp_tests
         tests/cpp/test_engine.cpp
     )
+
     target_link_libraries(oaa_cpp_tests PRIVATE oaa_core)
+
     add_test(NAME oaa_cpp_tests COMMAND oaa_cpp_tests)
+
+    add_executable(oaa_runtime_core_tests
+        tests/cpp/test_runtime_core.cpp
+    )
+
+    target_link_libraries(oaa_runtime_core_tests PRIVATE oaa_core)
+
+    add_test(NAME oaa_runtime_core_tests COMMAND oaa_runtime_core_tests)
 endif()
 
 if(OAA_BUILD_PYTHON_BINDINGS)
@@ -49,10 +65,18 @@ if(OAA_BUILD_PYTHON_BINDINGS)
     pybind11_add_module(oaa_cpp
         bindings/pybind_module.cpp
     )
+
     target_link_libraries(oaa_cpp PRIVATE oaa_core)
-    target_include_directories(oaa_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include)
+
+    target_include_directories(
+        oaa_cpp
+        PRIVATE
+            cpp/include
+    )
+
     if(MINGW)
         target_link_options(oaa_cpp PRIVATE -static-libgcc -static-libstdc++)
     endif()
+
     install(TARGETS oaa_cpp DESTINATION .)
 endif()
