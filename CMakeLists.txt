@@ -11,6 +11,10 @@ add_library(oaa_core STATIC
     cpp/src/engine.cpp
 )
 
+set_target_properties(oaa_core PROPERTIES
+    POSITION_INDEPENDENT_CODE ON
+)
+
 target_include_directories(oaa_core
     PUBLIC
         ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include
@@ -32,6 +36,14 @@ if(BUILD_TESTING)
 endif()
 
 if(OAA_BUILD_PYTHON_BINDINGS)
+    set(PYBIND11_FINDPYTHON ON)
+
+    find_package(
+        Python
+        REQUIRED
+        COMPONENTS Interpreter Development.Module
+    )
+
     find_package(pybind11 CONFIG REQUIRED)
 
     pybind11_add_module(oaa_cpp
@@ -39,4 +51,8 @@ if(OAA_BUILD_PYTHON_BINDINGS)
     )
     target_link_libraries(oaa_cpp PRIVATE oaa_core)
     target_include_directories(oaa_cpp PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/cpp/include)
+    if(MINGW)
+        target_link_options(oaa_cpp PRIVATE -static-libgcc -static-libstdc++)
+    endif()
+    install(TARGETS oaa_cpp DESTINATION .)
 endif()
