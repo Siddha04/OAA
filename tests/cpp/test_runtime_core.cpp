@@ -40,6 +40,10 @@ int main() {
         auto buffer = manager.allocate(4096);
         assert(buffer.size() == 4096);
         assert(buffer.data() != nullptr);
+
+        buffer.resize(8192);
+        assert(buffer.size() == 8192);
+        assert(buffer.data() != nullptr);
     }
 
     {
@@ -55,14 +59,10 @@ int main() {
 
         {
             std::ofstream manifest(manifest_path);
-            manifest << "vocab_size=32000
-";
-            manifest << "hidden_size=4096
-";
-            manifest << "num_layers=32
-";
-            manifest << "num_heads=32
-";
+            manifest << "vocab_size=32000" << std::endl;
+            manifest << "hidden_size=4096" << std::endl;
+            manifest << "num_layers=32" << std::endl;
+            manifest << "num_heads=32" << std::endl;
         }
 
         oaa::ManifestModelLoader loader;
@@ -91,7 +91,6 @@ int main() {
         assert(std::fabs(output.at({0, 1}) - 2.5F) < 1e-5F);
     }
 
-    std::cout << "OAA Phase 2 C++ runtime core tests passed
-";
+    std::cout << "OAA Phase 2 C++ runtime core tests passed" << std::endl;
     return 0;
 }
