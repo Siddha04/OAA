@@ -1,11 +1,20 @@
 cmake_minimum_required(VERSION 3.20)
-project(OAA VERSION 0.1.0 LANGUAGES CXX)
+project(OAA VERSION 0.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 option(OAA_BUILD_PYTHON_BINDINGS "Build the pybind11 Python module" ON)
+option(OAA_BUILD_CUDA "Build the optional CUDA backend" OFF)
+
+if(OAA_BUILD_CUDA)
+    enable_language(CUDA)
+    find_package(CUDAToolkit REQUIRED)
+    set(OAA_CUDA_RUNTIME_SOURCE cpp/src/cuda_runtime.cu)
+else()
+    set(OAA_CUDA_RUNTIME_SOURCE cpp/src/cuda_runtime_stub.cpp)
+endif()
 
 add_library(oaa_core STATIC
     cpp/src/engine.cpp
@@ -14,20 +23,35 @@ add_library(oaa_core STATIC
     cpp/src/tokenizer.cpp
     cpp/src/model.cpp
     cpp/src/inference.cpp
+    ${OAA_CUDA_RUNTIME_SOURCE}
 )
 
 set_target_properties(oaa_core PROPERTIES
     POSITION_INDEPENDENT_CODE ON
 )
 
+if(OAA_BUILD_CUDA)
+    set_target_properties(oaa_core PROPERTIES
+        CUDA_STANDARD 20
+        CUDA_STANDARD_REQUIRED ON
+    )
+endif()
+
 target_include_directories(oaa_core
     PUBLIC
         cpp/include
 )
 
+if(OAA_BUILD_CUDA)
+    target_compile_definitions(oaa_core PUBLIC OAA_HAS_CUDA=1)
+    target_link_libraries(oaa_core PUBLIC CUDA::cudart)
+else()
+    target_compile_definitions(oaa_core PUBLIC OAA_HAS_CUDA=0)
+endif()
+
 if(MSVC)
     target_compile_options(oaa_core PRIVATE /W4 /permissive-)
-else()
+elseif(NOT OAA_BUILD_CUDA)
     target_compile_options(oaa_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
@@ -49,6 +73,14 @@ if(BUILD_TESTING)
     target_link_libraries(oaa_runtime_core_tests PRIVATE oaa_core)
 
     add_test(NAME oaa_runtime_core_tests COMMAND oaa_runtime_core_tests)
+
+    add_executable(oaa_cuda_tests
+        tests/cpp/test_cuda_runtime.cpp
+    )
+
+    target_link_libraries(oaa_cuda_tests PRIVATE oaa_core)
+
+    add_test(NAME oaa_cuda_tests COMMAND oaa_cuda_tests)
 endif()
 
 if(OAA_BUILD_PYTHON_BINDINGS)

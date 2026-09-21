@@ -7,7 +7,7 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "oaa"
-version = "0.1.0"
+version = "0.3.0"
 description = "Personal local-first GenAI runtime"
 requires-python = ">=3.10"
 

@@ -1,6 +1,7 @@
 #include <pybind11/pybind11.h>
 #include <pybind11/stl.h>
 
+#include "oaa/cuda_runtime.hpp"
 #include "oaa/engine.hpp"
 
 namespace py = pybind11;
@@ -35,4 +36,12 @@ PYBIND11_MODULE(oaa_cpp, m) {
         .def("get_stats", &oaa::Engine::get_stats)
         .def("loaded", &oaa::Engine::loaded)
         .def("status", &oaa::Engine::status);
+
+    m.def("cuda_compiled", &oaa::CudaRuntime::compiled);
+    m.def("cuda_available", &oaa::CudaRuntime::available);
+    m.def(
+        "cuda_vector_add",
+        &oaa::CudaRuntime::vector_add,
+        py::arg("lhs"),
+        py::arg("rhs"));
 }
