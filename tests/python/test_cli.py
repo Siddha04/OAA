@@ -62,3 +62,26 @@ def test_cli_ask(tmp_path: Path, capsys) -> None:
     assert exit_code == 0
     assert len(captured.out.strip()) == 4
     assert captured.err == ""
+
+
+def test_cli_chat_control_commands(tmp_path: Path, monkeypatch, capsys) -> None:
+    manifest = tmp_path / "tiny.manifest"
+    write_manifest(manifest)
+
+    commands = iter(["/stats", "/system Be precise", "/reset", "/exit"])
+    monkeypatch.setattr("builtins.input", lambda _: next(commands))
+
+    exit_code = main(
+        [
+            "chat",
+            "--model",
+            str(manifest),
+            "--max-history-messages",
+            "4",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "OAA chat." in captured.out
+    assert "session reset" in captured.out

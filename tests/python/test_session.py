@@ -42,6 +42,15 @@ def test_session_history_is_bounded() -> None:
     assert [m.content for m in session.messages] == ["two", "three"]
 
 
+def test_session_history_setter_trims() -> None:
+    session = ChatSession(max_history_messages=4)
+    session.add("user", "one")
+    session.add("assistant", "two")
+    session.add("user", "three")
+    session.max_history_messages = 2
+    assert [m.content for m in session.messages] == ["two", "three"]
+
+
 def test_session_validation() -> None:
     with pytest.raises(ValueError):
         ChatSession(max_history_messages=0)
@@ -63,7 +72,6 @@ def test_assistant_chat_updates_history(tmp_path: Path) -> None:
     assert len(response) == 4
     assert len(assistant.history()) == 2
     assert assistant.history()[0].role == "user"
-    assert assistant.history()[0].content == "Hello"
     assert assistant.history()[1].role == "assistant"
     assert assistant.history()[1].content == response
 

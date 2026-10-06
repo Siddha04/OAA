@@ -76,7 +76,7 @@ def run_chat(args: argparse.Namespace) -> int:
 
     assistant = PersonalAssistant(engine)
     assistant.set_system_prompt(args.system)
-    assistant.session._max_history_messages = args.max_history_messages
+    assistant.session.max_history_messages = args.max_history_messages
 
     print("OAA chat. Commands: /reset, /system <text>, /stats, /exit")
 

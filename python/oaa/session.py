@@ -45,6 +45,19 @@ class ChatSession:
         self._system_prompt = value
 
     @property
+    def max_history_messages(self) -> int:
+        return self._max_history_messages
+
+    @max_history_messages.setter
+    def max_history_messages(self, value: int) -> None:
+        if value <= 0:
+            raise ValueError("max_history_messages must be greater than zero")
+        self._max_history_messages = value
+        overflow = len(self._messages) - value
+        if overflow > 0:
+            del self._messages[:overflow]
+
+    @property
     def messages(self) -> tuple[ChatMessage, ...]:
         return tuple(self._messages)
 
