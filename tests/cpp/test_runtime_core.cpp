@@ -52,6 +52,16 @@ int main() {
         const auto tokens = tokenizer->encode(text);
         assert(tokens.size() == text.size());
         assert(tokenizer->decode(tokens) == text);
+        assert(tokenizer->vocab_size() == 256);
+    }
+
+    {
+        auto tokenizer = oaa::create_printable_ascii_tokenizer();
+        const std::string text = "OAA runtime";
+        const auto tokens = tokenizer->encode(text);
+        assert(tokens.size() == text.size());
+        assert(tokenizer->decode(tokens) == text);
+        assert(tokenizer->vocab_size() == 95);
     }
 
     {
@@ -73,6 +83,8 @@ int main() {
         assert(config.hidden_size == 4096);
         assert(config.num_layers == 32);
         assert(config.num_heads == 32);
+        assert(config.intermediate_size == 16384);
+        assert(config.context_length == 256);
 
         loader.unload();
         assert(!loader.loaded());
@@ -91,6 +103,6 @@ int main() {
         assert(std::fabs(output.at({0, 1}) - 2.5F) < 1e-5F);
     }
 
-    std::cout << "OAA Phase 2 C++ runtime core tests passed" << std::endl;
+    std::cout << "OAA runtime core tests passed" << std::endl;
     return 0;
 }

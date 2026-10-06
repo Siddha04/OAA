@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 
 namespace oaa {
@@ -10,6 +11,10 @@ struct ModelConfig {
     std::size_t hidden_size{0};
     std::size_t num_layers{0};
     std::size_t num_heads{0};
+    std::size_t intermediate_size{0};
+    std::size_t context_length{0};
+    std::uint64_t seed{1};
+    std::string architecture{"manifest"};
 };
 
 class ModelLoader {

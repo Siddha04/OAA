@@ -16,7 +16,7 @@ class Engine:
 
     def load_model(self, path: str) -> bool:
         if not isinstance(path, str) or not path.strip():
-            raise ValueError("model path must be a non-empty string")
+            raise ValueError("model manifest path must be a non-empty string")
         return bool(self._runtime.load_model(path))
 
     def unload(self) -> None:
@@ -50,9 +50,15 @@ class Engine:
 
     def get_stats(self) -> dict[str, Any]:
         stats = self._runtime.get_stats()
+        tokens = int(stats.generated_tokens)
+        seconds = float(stats.last_generation_seconds)
         return {
             "model_loaded": bool(stats.model_loaded),
             "generation_calls": int(stats.generation_calls),
+            "prompt_tokens": int(stats.prompt_tokens),
+            "generated_tokens": tokens,
+            "last_generation_seconds": seconds,
+            "tokens_per_second": (tokens / seconds) if seconds > 0 else 0.0,
             "model_path": str(stats.model_path),
         }
 

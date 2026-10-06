@@ -12,11 +12,22 @@ PYBIND11_MODULE(oaa_cpp, m) {
     py::class_<oaa::GenerationConfig>(m, "GenerationConfig")
         .def(py::init<>())
         .def_readwrite("max_tokens", &oaa::GenerationConfig::max_tokens)
-        .def_readwrite("temperature", &oaa::GenerationConfig::temperature);
+        .def_readwrite("temperature", &oaa::GenerationConfig::temperature)
+        .def_readwrite("top_k", &oaa::GenerationConfig::top_k)
+        .def_readwrite("top_p", &oaa::GenerationConfig::top_p)
+        .def_readwrite(
+            "repetition_penalty",
+            &oaa::GenerationConfig::repetition_penalty)
+        .def_readwrite("seed", &oaa::GenerationConfig::seed);
 
     py::class_<oaa::RuntimeStats>(m, "RuntimeStats")
         .def_readonly("model_loaded", &oaa::RuntimeStats::model_loaded)
         .def_readonly("generation_calls", &oaa::RuntimeStats::generation_calls)
+        .def_readonly("prompt_tokens", &oaa::RuntimeStats::prompt_tokens)
+        .def_readonly("generated_tokens", &oaa::RuntimeStats::generated_tokens)
+        .def_readonly(
+            "last_generation_seconds",
+            &oaa::RuntimeStats::last_generation_seconds)
         .def_readonly("model_path", &oaa::RuntimeStats::model_path);
 
     py::class_<oaa::Engine>(m, "Engine")

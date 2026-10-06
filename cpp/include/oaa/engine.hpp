@@ -1,11 +1,17 @@
 #pragma once
 
+#include "oaa/model.hpp"
 #include "oaa/types.hpp"
 
+#include <cstdint>
+#include <memory>
 #include <string>
 #include <vector>
 
 namespace oaa {
+
+class Tokenizer;
+class TransformerModel;
 
 class Engine {
 public:
@@ -30,6 +36,17 @@ private:
     bool model_loaded_{false};
     std::string model_path_;
     std::uint64_t generation_calls_{0};
+    std::uint64_t prompt_tokens_{0};
+    std::uint64_t generated_tokens_{0};
+    double last_generation_seconds_{0.0};
+
+    ModelConfig model_config_{};
+    std::unique_ptr<Tokenizer> tokenizer_;
+    std::unique_ptr<TransformerModel> model_;
+    
+    std::vector<std::uint32_t> generate_tokens(
+        const std::string& prompt,
+        const GenerationConfig& config);
 };
 
 } // namespace oaa

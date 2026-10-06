@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OAA VERSION 0.2.0 LANGUAGES CXX)
+project(OAA VERSION 0.4.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -23,6 +23,7 @@ add_library(oaa_core STATIC
     cpp/src/tokenizer.cpp
     cpp/src/model.cpp
     cpp/src/inference.cpp
+    cpp/src/transformer.cpp
     ${OAA_CUDA_RUNTIME_SOURCE}
 )
 
@@ -61,25 +62,25 @@ if(BUILD_TESTING)
     add_executable(oaa_cpp_tests
         tests/cpp/test_engine.cpp
     )
-
     target_link_libraries(oaa_cpp_tests PRIVATE oaa_core)
-
     add_test(NAME oaa_cpp_tests COMMAND oaa_cpp_tests)
 
     add_executable(oaa_runtime_core_tests
         tests/cpp/test_runtime_core.cpp
     )
-
     target_link_libraries(oaa_runtime_core_tests PRIVATE oaa_core)
-
     add_test(NAME oaa_runtime_core_tests COMMAND oaa_runtime_core_tests)
+
+    add_executable(oaa_transformer_tests
+        tests/cpp/test_transformer.cpp
+    )
+    target_link_libraries(oaa_transformer_tests PRIVATE oaa_core)
+    add_test(NAME oaa_transformer_tests COMMAND oaa_transformer_tests)
 
     add_executable(oaa_cuda_tests
         tests/cpp/test_cuda_runtime.cpp
     )
-
     target_link_libraries(oaa_cuda_tests PRIVATE oaa_core)
-
     add_test(NAME oaa_cuda_tests COMMAND oaa_cuda_tests)
 endif()
 
