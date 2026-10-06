@@ -15,7 +15,7 @@ class TransformerModel;
 
 class Engine {
 public:
-    Engine() = default;
+    Engine();
     ~Engine();
 
     bool load_model(const std::string& path);

@@ -41,6 +41,8 @@ void validate_generation_config(
 
 } // namespace
 
+Engine::Engine() = default;
+
 Engine::~Engine() = default;
 
 bool Engine::load_model(const std::string& path) {
