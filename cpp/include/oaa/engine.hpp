@@ -16,6 +16,7 @@ class TransformerModel;
 class Engine {
 public:
     Engine() = default;
+    ~Engine();
 
     bool load_model(const std::string& path);
     void unload();
@@ -43,7 +44,7 @@ private:
     ModelConfig model_config_{};
     std::unique_ptr<Tokenizer> tokenizer_;
     std::unique_ptr<TransformerModel> model_;
-    
+
     std::vector<std::uint32_t> generate_tokens(
         const std::string& prompt,
         const GenerationConfig& config);
