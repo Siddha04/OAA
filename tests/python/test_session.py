@@ -15,7 +15,7 @@ def write_manifest(path: Path) -> None:
                 "num_layers=1",
                 "num_heads=4",
                 "intermediate_size=32",
-                "context_length=64",
+                "context_length=256",
                 "seed=12",
             ]
         ),

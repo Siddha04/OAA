@@ -18,7 +18,7 @@ std::string write_test_manifest() {
         << "num_layers=2\n"
         << "num_heads=4\n"
         << "intermediate_size=32\n"
-        << "context_length=64\n"
+        << "context_length=256\n"
         << "seed=42\n";
     return path;
 }
