@@ -1,23 +1,31 @@
-# OAA Phase 6A - Personal Assistant State Layer
+# OAA Phase 6 - Personal Assistant
 
-Phase 6A introduces reusable stateful assistant orchestration around the Phase 5 inference engine.
+Phase 6 adds the personal assistant orchestration and local CLI on top of the Phase 5 inference runtime.
 
-Implemented:
-- typed chat messages for system, user, and assistant roles
-- session identifiers
-- configurable bounded in-memory conversation history
-- system instruction management
+6A:
+- typed system/user/assistant messages
+- bounded in-memory session history
+- system prompt control
 - structured prompt rendering
-- stateful chat orchestration
-- token-streaming chat orchestration
-- session reset and lightweight forking
-- reuse of Engine and GenerationConfig
+- stateful chat and token streaming
+- session reset and fork
 
-The application prompt uses explicit role tags:
-<system>...</system>
-<user>...</user>
-<assistant>...</assistant>
+6B:
+- genai ask for one-shot local requests
+- genai chat for an interactive local session
+- local slash commands for reset, system prompt, stats, and exit
+- generation controls exposed as CLI flags
 
-Sessions are in-memory only. There is no database or persistence in this sub-phase. Context truncation is message-count based, not token-count based.
+CLI examples:
 
-The existing inference, CUDA fallback, and Python tests must continue to pass.
+genai ask --model tiny.manifest --max-tokens 32 "Hello"
+
+genai chat --model tiny.manifest --temperature 0.0
+
+The CLI is local-only and uses the existing Python facade and C++ inference engine. It does not add a network service.
+
+Limits:
+- sessions are in memory only
+- history is message-count based
+- the Phase 5 tiny transformer is a runtime validation model, not a pretrained conversational LLM
+- persistent memory and retrieval remain future phases
