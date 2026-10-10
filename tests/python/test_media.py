@@ -87,7 +87,7 @@ def test_load_wav_handles_24_bit_pcm_and_stereo(tmp_path: Path):
 
 def test_load_wav_enforces_duration_size_and_validity_limits(tmp_path: Path):
     path = tmp_path / "long.wav"
-    write_wav_file(path, [0] * 20, rate=10)
+    write_wav_file(path, [0] * 16000, rate=8000)
     with pytest.raises(ValueError, match="duration exceeds"):
         load_wav(path, max_duration_seconds=1.0)
     with pytest.raises(ValueError, match="max_file_bytes"):
