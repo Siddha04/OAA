@@ -11,6 +11,7 @@ from .assistant import PersonalAssistant
 from .config import GenerationConfig
 from .engine import Engine
 from .memory import MemoryStore
+from .media import load_image, load_wav
 from .rag import RAGPipeline
 from .tools import ToolPolicy
 from .tools.builtins import create_builtin_registry
@@ -153,6 +154,23 @@ def build_parser() -> argparse.ArgumentParser:
         help="tool name permitted for this invocation; repeat for each permitted tool",
     )
     agent_run.add_argument("--max-output-chars", type=int, default=8192)
+
+
+    media_parser = subparsers.add_parser(
+        "media", help="inspect local image and WAV inputs without model inference"
+    )
+    media_actions = media_parser.add_subparsers(dest="media_action", required=True)
+
+    image_info = media_actions.add_parser("image-info", help="decode and summarize a local image")
+    image_info.add_argument("--path", required=True, help="path to a local JPEG, PNG, or WebP image")
+    image_info.add_argument("--max-file-bytes", type=int, default=25 * 1024 * 1024)
+    image_info.add_argument("--max-pixels", type=int, default=16_777_216)
+    image_info.add_argument("--max-dimension", type=int, default=1024)
+
+    audio_info = media_actions.add_parser("audio-info", help="inspect a local uncompressed PCM WAV")
+    audio_info.add_argument("--path", required=True, help="path to a local WAV file")
+    audio_info.add_argument("--max-file-bytes", type=int, default=40 * 1024 * 1024)
+    audio_info.add_argument("--max-duration-seconds", type=float, default=60.0)
 
     return parser
 
@@ -457,6 +475,28 @@ def run_agent(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def run_media(args: argparse.Namespace) -> int:
+    if args.media_action == "image-info":
+        result = load_image(
+            args.path,
+            max_file_bytes=args.max_file_bytes,
+            max_pixels=args.max_pixels,
+            max_dimension=args.max_dimension,
+        )
+        print(json.dumps(result.summary(), ensure_ascii=False, allow_nan=False))
+        return 0
+    if args.media_action == "audio-info":
+        result = load_wav(
+            args.path,
+            max_file_bytes=args.max_file_bytes,
+            max_duration_seconds=args.max_duration_seconds,
+        )
+        print(json.dumps(result.summary(), ensure_ascii=False, allow_nan=False))
+        return 0
+    raise ValueError("unsupported media action")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -474,6 +514,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_tools(args)
         if args.command == "agent":
             return run_agent(args)
+        if args.command == "media":
+            return run_media(args)
         parser.error("unknown command")
     except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)

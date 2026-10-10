@@ -79,6 +79,7 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 8: explicit local SQLite long-term memory with list/search/update/delete and optional chat recall.
 - Phase 9: a deny-by-default tool registry, bounded calculator, workspace-scoped read-only text reader, and explicit tool CLI.
 - Phase 10: structured Personal Agent plans with bounded steps, schema checks, an exact tool allow-list, and per-step user approval.
+- Phase 11: bounded local image/WAV ingestion, normalized PCM access, and explicit speech-model adapter contracts; no pretrained vision or speech model is bundled.
 
 ## Phase 7 limitations
 
@@ -163,3 +164,22 @@ Run a plan only after naming the tool or tools allowed for this invocation:
 The CLI displays each proposed call and asks for approval before each step. Without a positive approval, that step and the remaining plan do not execute. All tools and arguments are validated before the first action, and the complete plan must fit the configured step limit. To use the read-only file tool, pass an explicit workspace and include the tool in the allow-list.
 
 Phase 10 accepts structured, caller-supplied plans; it does not claim that the seeded tiny transformer can reliably invent tool calls from natural-language requests. The agent does not add shell or network tools, does not evaluate plan text as code, and does not automatically turn tool output into further actions. OAA still does not yet load a pretrained conversational LLM.
+
+
+## Local multimodal foundation (Phase 11)
+
+Install the optional image decoder:
+
+    python -m pip install "oaa[vision]"
+
+Inspect a local image (JPEG, PNG, or WebP); the CLI decodes it to bounded, orientation-corrected RGB pixels:
+
+    genai media image-info --path ./photo.png
+
+Inspect a local uncompressed PCM WAV file:
+
+    genai media audio-info --path ./speech.wav
+
+The Python API is available from the oaa.media module or via the package exports load_image, load_wav, transcribe_audio, and synthesize_speech. WAV input supports mono/stereo PCM with 8–192 kHz sample rates and bounded duration/file size. Images and audio are read from local paths; no camera, microphone, network or cloud API is accessed.
+
+This phase prepares media and defines explicit SpeechToTextBackend / TextToSpeechBackend adapter contracts, but does not bundle a vision encoder, OCR engine, ASR model, TTS model, or model-driven image/audio understanding. Calling speech transcription or synthesis without supplying a backend fails clearly instead of silently connecting to a service.
