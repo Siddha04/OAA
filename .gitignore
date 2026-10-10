@@ -39,3 +39,9 @@ datasets/
 # OS
 .DS_Store
 Thumbs.db
+
+# Private local assistant state (never commit personal memories)
+.oaa/
+*.sqlite3
+*.sqlite3-wal
+*.sqlite3-shm
