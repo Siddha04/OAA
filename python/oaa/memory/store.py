@@ -163,12 +163,15 @@ class MemoryStore:
             ).fetchall()
 
         records = [record for row in rows if (record := self._record(row)) is not None]
+        # Stable secondary ordering makes the match score the primary key,
+        # with recently updated records winning ties.
+        records.sort(key=lambda item: (item.updated_at, item.id), reverse=True)
         records.sort(
-            key=lambda item: (
-                -sum(token in (item.content + " " + item.category + " " + item.source).casefold()
-                     for token in tokens),
-                item.updated_at,
-                item.id,
+            key=lambda item: sum(
+                (item.content + " " + item.category + " " + item.source)
+                .casefold()
+                .count(token)
+                for token in tokens
             ),
             reverse=True,
         )

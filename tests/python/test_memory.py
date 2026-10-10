@@ -22,11 +22,11 @@ def test_memory_persists_across_store_instances(tmp_path: Path) -> None:
 
 def test_memory_search_prioritizes_more_matching_tokens(tmp_path: Path) -> None:
     store = MemoryStore(tmp_path / "memory.sqlite3")
-    store.add("Prefers Python examples", category="preference")
-    store.add("Prefers concise Python technical examples", category="preference")
+    store.add("Prefers Python", category="preference")
+    store.add("Python examples include more examples", category="preference")
     results = store.search("Python examples")
     assert len(results) == 2
-    assert results[0].content == "Prefers concise Python technical examples"
+    assert results[0].content == "Python examples include more examples"
 
 
 def test_memory_update_and_delete_lifecycle(tmp_path: Path) -> None:
