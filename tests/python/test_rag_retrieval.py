@@ -31,9 +31,9 @@ def test_vector_store_ranks_matching_lexical_content_and_keeps_provenance() -> N
     store.add(_chunks("support.md", "Customer support tickets track product feedback."))
 
     results = store.search("SQL database indexes", top_k=3)
-    assert len(results) == 3
+    assert len(results) == 1
     assert results[0].source == "database.md"
-    assert results[0].score > results[-1].score
+    assert results[0].score > 0.0
     assert results[0].chunk.text.startswith("SQL database")
     assert 0.0 <= results[0].score <= 1.0
 

@@ -68,13 +68,13 @@ class InMemoryVectorStore:
         query: str,
         *,
         top_k: int = 5,
-        min_score: float = 0.0,
+        min_score: float = 0.01,
     ) -> list[SearchResult]:
         if not isinstance(query, str) or not query.strip():
             raise ValueError("query must be a non-empty string")
         if not isinstance(top_k, int) or isinstance(top_k, bool) or top_k <= 0:
             raise ValueError("top_k must be a positive integer")
-        if not math.isfinite(min_score) or min_score < -1.0 or min_score > 1.0:
+        if not isinstance(min_score, (int, float)) or not math.isfinite(min_score) or min_score < -1.0 or min_score > 1.0:
             raise ValueError("min_score must be finite and between -1 and 1")
         if not self._entries:
             return []

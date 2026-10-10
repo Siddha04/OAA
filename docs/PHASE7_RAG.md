@@ -14,19 +14,28 @@
 - HashEmbeddingModel creates deterministic normalized lexical feature vectors from unigrams and adjacent-token bigrams.
 - InMemoryVectorStore stores vectors in process memory and ranks by cosine similarity.
 - Results preserve document source, metadata, chunk index, and a bounded similarity score.
-- Search tie-breaking is deterministic. Duplicate source/chunk IDs replace earlier entries.
+- Search tie-breaking is deterministic and the default score threshold excludes zero-similarity results.
+
+## Step 7C: RAG context integration
+
+- RAGPipeline can ingest one file or a directory, chunk the extracted text, index the chunks, search, and produce a size-bounded context.
+- PersonalAssistant accepts an optional RAGPipeline. When supplied, it retrieves relevant excerpts and injects them into both normal and streaming prompts.
+- Source paths, chunk indices, and similarity values are retained.
+- Retrieved document markup is escaped before prompt insertion. The prompt explicitly says retrieved content is untrusted reference data, not instructions.
+- Chat behavior remains unchanged when no RAG pipeline is configured.
 
 Example usage:
 
-    from oaa.rag import HashEmbeddingModel, InMemoryVectorStore, chunk_document, load_directory
+    from oaa import Engine, PersonalAssistant
+    from oaa.rag import RAGPipeline
 
-    index = InMemoryVectorStore(HashEmbeddingModel())
-    for document in load_directory("./knowledge"):
-        index.add(chunk_document(document))
-    for result in index.search("how does model loading work", top_k=4):
-        print(result.source, result.score, result.chunk.text)
+    rag = RAGPipeline()
+    rag.ingest_directory("./knowledge")
+    assistant = PersonalAssistant(Engine("tiny.manifest"), rag_pipeline=rag)
+    answer = assistant.chat("What do my local notes say about model loading?")
+    print(answer)
 
-All processing is local. Source documents and the in-memory index are not committed to the repository.
+All processing is local. The source documents and in-memory index are not committed to the repository.
 
 ## Limitations
 
