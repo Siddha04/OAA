@@ -1,4 +1,5 @@
 from pathlib import Path
+from types import SimpleNamespace
 
 from oaa.cli import build_parser, main
 
@@ -45,16 +46,8 @@ def test_cli_ask(tmp_path: Path, capsys) -> None:
 
     exit_code = main(
         [
-            "ask",
-            "--model",
-            str(manifest),
-            "--max-tokens",
-            "4",
-            "--temperature",
-            "0.0",
-            "--seed",
-            "4",
-            "Hello",
+            "ask", "--model", str(manifest), "--max-tokens", "4",
+            "--temperature", "0.0", "--seed", "4", "Hello",
         ]
     )
 
@@ -73,11 +66,8 @@ def test_cli_chat_control_commands(tmp_path: Path, monkeypatch, capsys) -> None:
 
     exit_code = main(
         [
-            "chat",
-            "--model",
-            str(manifest),
-            "--max-history-messages",
-            "4",
+            "chat", "--model", str(manifest),
+            "--max-history-messages", "4",
         ]
     )
 
@@ -85,3 +75,86 @@ def test_cli_chat_control_commands(tmp_path: Path, monkeypatch, capsys) -> None:
     assert exit_code == 0
     assert "OAA chat." in captured.out
     assert "session reset" in captured.out
+
+
+def test_cli_search_local_documents(tmp_path: Path, capsys) -> None:
+    docs = tmp_path / "knowledge"
+    docs.mkdir()
+    (docs / "manual.md").write_text(
+        "OAA loads model weights from a local manifest and stores project notes.",
+        encoding="utf-8",
+    )
+    (docs / "other.txt").write_text(
+        "Cooking pasta requires boiling water.", encoding="utf-8"
+    )
+
+    exit_code = main(
+        [
+            "search", "--docs", str(docs), "--top-k", "3",
+            "where does OAA load model weights",
+        ]
+    )
+
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "manual.md" in captured.out
+    assert "model weights" in captured.out
+    assert "other.txt" not in captured.out
+
+
+def test_cli_chat_can_attach_local_rag(tmp_path: Path, monkeypatch, capsys) -> None:
+    manifest = tmp_path / "tiny.manifest"
+    write_manifest(manifest)
+    docs = tmp_path / "knowledge"
+    docs.mkdir()
+    (docs / "manual.txt").write_text(
+        "OAA keeps local notes in its retrieval index.", encoding="utf-8"
+    )
+
+    class FakeAssistant:
+        def __init__(
+            self,
+            engine,
+            *,
+            rag_pipeline=None,
+            rag_top_k=3,
+            rag_max_context_chars=512,
+        ) -> None:
+            assert rag_pipeline is not None
+            assert rag_pipeline.store.count == 1
+            self.session = SimpleNamespace(max_history_messages=32)
+            self.rag_pipeline = rag_pipeline
+
+        def set_system_prompt(self, prompt):
+            self.system_prompt = prompt
+
+        def chat_stream(self, message, config):
+            yield "RAG"
+            yield " works"
+
+        def reset(self):
+            pass
+
+        def stats(self):
+            return {"ok": True}
+
+    monkeypatch.setattr("oaa.cli.PersonalAssistant", FakeAssistant)
+    commands = iter(["What do my local notes say?", "/exit"])
+    monkeypatch.setattr("builtins.input", lambda _: next(commands))
+
+    exit_code = main(
+        ["chat", "--model", str(manifest), "--docs", str(docs)]
+    )
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Indexed 1 chunks" in captured.out
+    assert "RAG works" in captured.out
+
+
+def test_cli_search_empty_directory(tmp_path: Path, capsys) -> None:
+    docs = tmp_path / "empty"
+    docs.mkdir()
+    exit_code = main(["search", "--docs", str(docs), "anything"])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "No extractable document chunks" in captured.out

@@ -18,27 +18,27 @@
 
 ## Step 7C: RAG context integration
 
-- RAGPipeline can ingest one file or a directory, chunk the extracted text, index the chunks, search, and produce a size-bounded context.
-- PersonalAssistant accepts an optional RAGPipeline. When supplied, it retrieves relevant excerpts and injects them into both normal and streaming prompts.
+- RAGPipeline ingests files/directories, chunks extracted text, indexes chunks, searches them, and produces a size-bounded context.
+- PersonalAssistant accepts an optional RAGPipeline. When supplied, relevant excerpts enter normal and streaming prompts.
 - Source paths, chunk indices, and similarity values are retained.
-- Retrieved document markup is escaped before prompt insertion. The prompt explicitly says retrieved content is untrusted reference data, not instructions.
+- Retrieved document markup is escaped before prompt insertion. The prompt says retrieved content is untrusted reference data, not instructions.
 - Chat behavior remains unchanged when no RAG pipeline is configured.
 
-Example usage:
+## Step 7D: local CLI
 
-    from oaa import Engine, PersonalAssistant
-    from oaa.rag import RAGPipeline
+Search a directory without loading a language model:
 
-    rag = RAGPipeline()
-    rag.ingest_directory("./knowledge")
-    assistant = PersonalAssistant(Engine("tiny.manifest"), rag_pipeline=rag)
-    answer = assistant.chat("What do my local notes say about model loading?")
-    print(answer)
+    genai search --docs ./knowledge "how does model loading work"
 
-All processing is local. The source documents and in-memory index are not committed to the repository.
+Start a retrieval-assisted chat:
+
+    genai chat --model ./tiny.manifest --docs ./knowledge
+
+Omitting the docs option leaves ordinary chat unchanged. Both commands rebuild the in-memory index from the directory at startup.
 
 ## Limitations
 
 - HashEmbeddingModel is a lexical retrieval baseline, not a semantic pretrained embedding model. Paraphrases with little word overlap can be missed.
-- The index is in memory and is lost when the process exits. Persistent indexing is a later step.
+- The index is in memory and is lost when the process exits.
 - PDF support extracts selectable text only; scanned-document OCR is not included.
+- A long chat history plus retrieved context can exceed the tiny validation model's prompt context; keep the selected context size modest.

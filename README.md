@@ -2,96 +2,88 @@
 
 **OAA — Personal Local-First GenAI Runtime**
 
-OAA is a personal GenAI system built around a Python orchestration layer and a high-performance C++ runtime. The initial architecture is local-first: Python handles orchestration while C++ handles performance-critical runtime and inference work.
+OAA is a personal GenAI system built around a Python orchestration layer and a C++ runtime. The intended design keeps document ingestion, retrieval, sessions, and orchestration local; performance-critical inference runs through the native runtime.
 
 ## Architecture
 
-```text
-Python
-├── RAG
-├── Agents
-├── Memory
-├── Tools
-├── Training
-├── Evaluation
-└── Orchestration
-        │
-      pybind11
-        │
-        ▼
-C++ Runtime
-├── Inference
-├── Tensor operations
-├── KV cache
-├── Quantization
-├── Memory management
-└── CUDA acceleration
-        │
-       GPU
-        │
-       LLM
-```
+    Python
+    ├── RAG
+    ├── Agents
+    ├── Memory
+    ├── Tools
+    ├── Training
+    ├── Evaluation
+    └── Orchestration
+            |
+          pybind11
+            |
+            v
+       C++ Runtime
+       ├── Inference
+       ├── Tensor operations
+       ├── KV cache
+       ├── Quantization
+       ├── Memory management
+       └── CPU / optional CUDA execution
 
 ## Language responsibilities
 
 ### Python
-- AI orchestration
-- RAG and retrieval
-- Memory
-- Agents and tools
-- Training and fine-tuning workflows
-- Evaluation
-- APIs and high-level application logic
+
+- AI orchestration and assistant sessions
+- Local document ingestion and retrieval-augmented prompts
+- Agents, tools, and memory
+- Training, fine-tuning, and evaluation workflows
 
 ### C++
-- Model runtime
-- Tensor operations
-- Token generation
-- KV cache
+
+- Model runtime and tensor operations
+- Token generation and KV cache
 - Memory management
-- Quantization
-- CPU/GPU execution
-- CUDA acceleration
+- CPU execution and optional CUDA kernels
 
-## Python ↔ C++ boundary
+## Install and use
 
-OAA uses **pybind11** as the primary in-process bridge. The Python-facing runtime API is intentionally small and stable:
+Install the package from a local checkout in an environment where the C++ build tools are installed:
 
-- `load_model()`
-- `generate()`
-- `generate_stream()`
-- `embed()`
-- `get_stats()`
-- `unload()`
+    python -m pip install .
 
-Python orchestrates; C++ executes performance-critical runtime work.
+PDF extraction is optional:
 
-## Roadmap
+    python -m pip install "oaa[rag]"
 
-1. Foundation: C++20, CMake, Python package, tests, CI
-2. C++ model/runtime core
-3. Python ↔ C++ integration with pybind11
-4. CUDA acceleration
-5. Local LLM inference
-6. Personal chat assistant
-7. Personal RAG
-8. Long-term memory
-9. Tool system
-10. Personal agent
-11. Vision and voice
-12. Fine-tuning
-13. Evaluation and optimization
-14. Native CLI personal GenAI platform
-15. Advanced inference and agent research
+Search your local documents without loading a language model:
 
-## Phase 1 acceptance criteria
+    genai search --docs ./knowledge "where are model settings stored"
 
-- C++ builds with CMake
-- Python package imports successfully
-- Python can instantiate the C++ engine through pybind11
-- A deterministic Python → C++ → Python smoke test passes
-- No model-specific implementation is required in Phase 1
+Start a retrieval-assisted chat using a model manifest and a local knowledge directory:
 
-## Status
+    genai chat --model ./tiny.manifest --docs ./knowledge
 
-Phase 1 foundation is being established.
+Use a normal chat session without document retrieval by omitting the docs option:
+
+    genai chat --model ./tiny.manifest
+
+The search and chat commands read documents from the selected local directory. Documents and the vector index are not uploaded or committed. The current vector index is in memory, so it is rebuilt on each command invocation.
+
+## Current implementation status
+
+- Phases 1-3: foundation, C++ runtime core, and Python/C++ boundary implemented and CI verified.
+- Phase 4: CUDA support has a CPU fallback and software integration tests. Real NVIDIA GPU execution is not verified on the project's AMD-only development machine.
+- Phase 5: a small decoder-only transformer validates inference and sampling. It initializes test weights from a manifest seed; it is not a pretrained conversational LLM or a GGUF/Safetensors loader.
+- Phase 6: local assistant sessions and CLI chat/ask implemented.
+- Phase 7A: local document loaders, size limits, and overlapping chunking implemented.
+- Phase 7B: deterministic lexical hash embeddings and an in-memory cosine-search index implemented.
+- Phase 7C: retrieved context can be inserted into normal and streaming assistant prompts with source attribution.
+- Phase 7D: local document search and optional RAG-enabled chat CLI implemented.
+
+## Phase 7 limitations
+
+- Hash embeddings are a lexical baseline, not pretrained semantic embeddings. Questions phrased with little word overlap can miss relevant passages.
+- The retrieval index is memory-only and is rebuilt each run; persistent indexing is future work.
+- PDFs need the optional pypdf dependency and must contain selectable text. Scanned PDFs require OCR, which is not included.
+- This project does not yet load pretrained model weights in GGUF, Safetensors, or Hugging Face formats.
+
+## Python / C++ boundary
+
+OAA uses pybind11 for the in-process bridge. The Python-facing runtime API includes model loading, generation, streaming, runtime statistics, and unload operations.
