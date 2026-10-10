@@ -4,28 +4,6 @@
 
 OAA is a personal GenAI system built around a Python orchestration layer and a C++ runtime. The intended design keeps document ingestion, retrieval, sessions, and orchestration local; performance-critical inference runs through the native runtime.
 
-## Architecture
-
-    Python
-    ├── RAG
-    ├── Agents
-    ├── Memory
-    ├── Tools
-    ├── Training
-    ├── Evaluation
-    └── Orchestration
-            |
-          pybind11
-            |
-            v
-       C++ Runtime
-       ├── Inference
-       ├── Tensor operations
-       ├── KV cache
-       ├── Quantization
-       ├── Memory management
-       └── CPU / optional CUDA execution
-
 ## Language responsibilities
 
 ### Python
