@@ -3,8 +3,10 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+from pathlib import Path
 from collections.abc import Sequence
 
+from .agent import PersonalAgent
 from .assistant import PersonalAssistant
 from .config import GenerationConfig
 from .engine import Engine
@@ -127,6 +129,30 @@ def build_parser() -> argparse.ArgumentParser:
     tools_run.add_argument("--args", default="{}", help="tool arguments encoded as a JSON object")
     tools_run.add_argument("--max-output-chars", type=int, default=8192)
     add_workspace_option(tools_run)
+
+
+    agent_parser = subparsers.add_parser(
+        "agent", help="preview or run approval-gated local tool plans"
+    )
+    agent_actions = agent_parser.add_subparsers(dest="agent_action", required=True)
+
+    def add_agent_plan_options(command: argparse.ArgumentParser) -> None:
+        source = command.add_mutually_exclusive_group(required=True)
+        source.add_argument("--plan-json", help="structured agent plan as JSON text")
+        source.add_argument("--plan-file", help="path to a UTF-8 JSON plan file")
+        command.add_argument("--workspace", help="explicit directory allowed for read_text_file")
+        command.add_argument("--max-steps", type=int, default=4)
+
+    agent_plan = agent_actions.add_parser("plan", help="validate and preview a plan without execution")
+    add_agent_plan_options(agent_plan)
+
+    agent_run = agent_actions.add_parser("run", help="run a plan with per-step approval")
+    add_agent_plan_options(agent_run)
+    agent_run.add_argument(
+        "--allow-tool", action="append", required=True,
+        help="tool name permitted for this invocation; repeat for each permitted tool",
+    )
+    agent_run.add_argument("--max-output-chars", type=int, default=8192)
 
     return parser
 
@@ -354,6 +380,83 @@ def run_tools(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def _load_agent_payload(args: argparse.Namespace) -> dict:
+    if args.plan_json is not None:
+        try:
+            payload = json.loads(args.plan_json)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"--plan-json must be valid JSON: {exc.msg}") from exc
+    else:
+        plan_path = Path(args.plan_file)
+        if plan_path.stat().st_size > 64 * 1024:
+            raise ValueError("plan file exceeds the 65536-byte limit")
+        try:
+            payload = json.loads(plan_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"plan file must contain valid JSON: {exc.msg}") from exc
+    if not isinstance(payload, dict):
+        raise ValueError("agent plan must be a JSON object")
+    return payload
+
+
+def run_agent(args: argparse.Namespace) -> int:
+    registry = create_builtin_registry(workspace=args.workspace)
+    preview_agent = PersonalAgent(registry, max_steps=args.max_steps)
+    plan = preview_agent.prepare_plan(_load_agent_payload(args))
+
+    print(f"Goal: {plan.goal}")
+    print("Proposed steps:")
+    for index, call in enumerate(plan.steps, start=1):
+        tool = registry.get(call.tool_name)
+        print(f"  {index}. {tool.name} [{tool.capability}]")
+        print("     arguments: " + json.dumps(
+            call.arguments, ensure_ascii=False, allow_nan=False, sort_keys=True
+        ))
+        if call.rationale:
+            print(f"     reason: {call.rationale}")
+
+    if args.agent_action == "plan":
+        print("Preview only: no tool handlers were executed.")
+        return 0
+
+    allowed_names = frozenset(args.allow_tool)
+    allowed_capabilities = frozenset(
+        registry.get(name).capability for name in allowed_names
+    )
+    policy = ToolPolicy(
+        allowed_tools=allowed_names,
+        allowed_capabilities=allowed_capabilities,
+    )
+    agent = PersonalAgent(
+        registry,
+        policy=policy,
+        max_steps=args.max_steps,
+        max_output_chars=args.max_output_chars,
+    )
+    print("Allowed tools: " + ", ".join(sorted(allowed_names)))
+
+    def request_approval(call) -> bool:
+        tool = registry.get(call.tool_name)
+        print(
+            f"Approval required: {tool.name} [{tool.capability}] "
+            f"arguments={json.dumps(call.arguments, ensure_ascii=False, allow_nan=False)}"
+        )
+        try:
+            answer = input("Execute this step? [y/N] ").strip().lower()
+        except (EOFError, KeyboardInterrupt):
+            print()
+            return False
+        return answer in {"y", "yes"}
+
+    results = agent.run_plan(plan, approve=request_approval)
+    for result in results:
+        print(json.dumps(result.to_dict(), ensure_ascii=False, allow_nan=False))
+    if any(result.status in {"rejected", "failed"} for result in results):
+        return 1
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -369,6 +472,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_memory(args)
         if args.command == "tools":
             return run_tools(args)
+        if args.command == "agent":
+            return run_agent(args)
         parser.error("unknown command")
     except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)

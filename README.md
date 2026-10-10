@@ -76,6 +76,9 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 7B: deterministic lexical hash embeddings and an in-memory cosine-search index implemented.
 - Phase 7C: retrieved context can be inserted into normal and streaming assistant prompts with source attribution.
 - Phase 7D: local document search and optional RAG-enabled chat CLI implemented.
+- Phase 8: explicit local SQLite long-term memory with list/search/update/delete and optional chat recall.
+- Phase 9: a deny-by-default tool registry, bounded calculator, workspace-scoped read-only text reader, and explicit tool CLI.
+- Phase 10: structured Personal Agent plans with bounded steps, schema checks, an exact tool allow-list, and per-step user approval.
 
 ## Phase 7 limitations
 
@@ -132,3 +135,31 @@ Read a text file only from an explicitly selected workspace:
     genai tools run read_text_file --workspace ./knowledge --args '{"path":"manual.md"}'
 
 The calculator accepts arithmetic only and does not execute Python code. The file reader is read-only, limits file size, rejects hidden/generated paths, and refuses paths that resolve outside the selected workspace. A tool must pass the tool-name and capability allow-list. The CLI invokes only the tool explicitly named by the user; no shell or network tool is registered by default.
+
+
+## Approval-gated Personal Agent (Phase 10)
+
+Preview a structured plan without running any tool:
+
+    genai agent plan --plan-file ./agent-plan.json
+
+A plan is ordinary JSON with a goal and an ordered list of tool calls:
+
+    {
+      "goal": "Calculate a half of 100",
+      "steps": [
+        {
+          "tool": "calculator",
+          "arguments": {"expression": "100 / 2"},
+          "reason": "Compute the requested value"
+        }
+      ]
+    }
+
+Run a plan only after naming the tool or tools allowed for this invocation:
+
+    genai agent run --plan-file ./agent-plan.json --allow-tool calculator
+
+The CLI displays each proposed call and asks for approval before each step. Without a positive approval, that step and the remaining plan do not execute. All tools and arguments are validated before the first action, and the complete plan must fit the configured step limit. To use the read-only file tool, pass an explicit workspace and include the tool in the allow-list.
+
+Phase 10 accepts structured, caller-supplied plans; it does not claim that the seeded tiny transformer can reliably invent tool calls from natural-language requests. The agent does not add shell or network tools, does not evaluate plan text as code, and does not automatically turn tool output into further actions. OAA still does not yet load a pretrained conversational LLM.
