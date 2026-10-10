@@ -87,3 +87,30 @@ The search and chat commands read documents from the selected local directory. D
 ## Python / C++ boundary
 
 OAA uses pybind11 for the in-process bridge. The Python-facing runtime API includes model loading, generation, streaming, runtime statistics, and unload operations.
+
+
+## Long-term memory (Phase 8)
+
+Save a memory explicitly; OAA does not automatically store chat transcripts:
+
+    genai memory add --db ./.oaa/memory.sqlite3 --category preference "Prefers concise technical examples"
+
+List or search saved memories:
+
+    genai memory list --db ./.oaa/memory.sqlite3
+    genai memory search --db ./.oaa/memory.sqlite3 "Python examples"
+
+Update or delete one memory by its displayed ID:
+
+    genai memory update --db ./.oaa/memory.sqlite3 1 "Prefers concise code examples"
+    genai memory delete --db ./.oaa/memory.sqlite3 1
+
+Clear all records only with explicit confirmation:
+
+    genai memory clear --db ./.oaa/memory.sqlite3 --yes
+
+Enable recall during local chat:
+
+    genai chat --model ./tiny.manifest --memory-db ./.oaa/memory.sqlite3
+
+The database is local and ignored by Git. This implementation does not encrypt it, so do not store passwords, tokens, or other highly sensitive information. SQLite deletion removes logical records but is not a guarantee of secure physical erasure.

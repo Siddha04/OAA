@@ -158,3 +158,92 @@ def test_cli_search_empty_directory(tmp_path: Path, capsys) -> None:
     captured = capsys.readouterr()
     assert exit_code == 0
     assert "No extractable document chunks" in captured.out
+
+
+
+def test_cli_memory_add_search_list_update_delete(tmp_path: Path, capsys) -> None:
+    db = tmp_path / "memory.sqlite3"
+    assert main([
+        "memory", "add", "--db", str(db), "--category", "preference",
+        "Prefers concise Python examples",
+    ]) == 0
+    added = capsys.readouterr()
+    assert "Saved memory 1" in added.out
+
+    assert main(["memory", "search", "--db", str(db), "Python examples"]) == 0
+    searched = capsys.readouterr()
+    assert "Prefers concise Python examples" in searched.out
+
+    assert main(["memory", "list", "--db", str(db), "--category", "preference"]) == 0
+    listed = capsys.readouterr()
+    assert "[1] [preference]" in listed.out
+
+    assert main([
+        "memory", "update", "--db", str(db), "1", "Prefers technical summaries",
+    ]) == 0
+    updated = capsys.readouterr()
+    assert "Updated memory 1" in updated.out
+
+    assert main(["memory", "delete", "--db", str(db), "1"]) == 0
+    deleted = capsys.readouterr()
+    assert "Deleted memory 1" in deleted.out
+
+
+def test_cli_memory_clear_requires_confirmation(tmp_path: Path, capsys) -> None:
+    db = tmp_path / "memory.sqlite3"
+    assert main(["memory", "add", "--db", str(db), "Keep me"]) == 0
+    capsys.readouterr()
+
+    assert main(["memory", "clear", "--db", str(db)]) == 2
+    refused = capsys.readouterr()
+    assert "without --yes" in refused.err
+
+    assert main(["memory", "list", "--db", str(db)]) == 0
+    assert "Keep me" in capsys.readouterr().out
+
+    assert main(["memory", "clear", "--db", str(db), "--yes"]) == 0
+    assert "Deleted 1 memories" in capsys.readouterr().out
+
+
+def test_cli_chat_can_enable_persistent_memory(
+    tmp_path: Path, monkeypatch, capsys
+) -> None:
+    manifest = tmp_path / "tiny.manifest"
+    write_manifest(manifest)
+    db = tmp_path / "memory.sqlite3"
+
+    class FakeAssistant:
+        def __init__(self, engine, *, memory_store=None, **kwargs) -> None:
+            assert memory_store is not None
+            assert len(memory_store.list_memories()) == 1
+            self.session = SimpleNamespace(max_history_messages=32)
+
+        def set_system_prompt(self, prompt):
+            self.system_prompt = prompt
+
+        def chat_stream(self, message, config):
+            yield "memory"
+            yield " enabled"
+
+        def reset(self):
+            pass
+
+        def stats(self):
+            return {"ok": True}
+
+    assert main([
+        "memory", "add", "--db", str(db), "Prefers short examples",
+        "--category", "preference",
+    ]) == 0
+    capsys.readouterr()
+    monkeypatch.setattr("oaa.cli.PersonalAssistant", FakeAssistant)
+    commands = iter(["show short examples", "/exit"])
+    monkeypatch.setattr("builtins.input", lambda _: next(commands))
+
+    exit_code = main([
+        "chat", "--model", str(manifest), "--memory-db", str(db),
+    ])
+    captured = capsys.readouterr()
+    assert exit_code == 0
+    assert "Persistent memory enabled" in captured.out
+    assert "memory enabled" in captured.out

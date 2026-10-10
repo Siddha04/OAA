@@ -18,4 +18,4 @@ __all__ = [
     "cuda_compiled",
     "cuda_vector_add",
 ]
-__version__ = "0.4.0"
+__version__ = "0.5.0"

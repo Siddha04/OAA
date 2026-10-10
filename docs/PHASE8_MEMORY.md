@@ -28,3 +28,10 @@ This step builds the storage layer only. Automatic recall/injection and explicit
 - Recall is opt-in and lexical; ordinary chat without a MemoryStore keeps the same prompt behavior.
 - User and assistant turns are not added to persistent memory. Saving remains a separate explicit operation.
 - Common query stopwords are ignored during lexical memory search to reduce matches on generic wording.
+
+## Step 8C: explicit memory-management CLI
+
+- `genai memory add/list/search/update/delete/clear` manages a local SQLite database.
+- The default path is `.oaa/memory.sqlite3`; commands also accept `--db`.
+- Clearing all memories requires the explicit `--yes` flag. A request without it is rejected and preserves all records.
+- `genai chat --memory-db <path>` opts into recall of saved records. It does not automatically save the user's prompt or generated response.
