@@ -5,6 +5,7 @@ from typing import Any
 
 from .config import GenerationConfig
 from .engine import Engine
+from .memory import MemoryStore
 from .rag.pipeline import RAGPipeline
 from .session import ChatMessage, ChatSession
 
@@ -18,16 +19,26 @@ class PersonalAssistant:
         rag_pipeline: RAGPipeline | None = None,
         rag_top_k: int = 3,
         rag_max_context_chars: int = 512,
+        memory_store: MemoryStore | None = None,
+        memory_top_k: int = 5,
+        memory_max_context_chars: int = 384,
     ) -> None:
         if rag_top_k <= 0:
             raise ValueError("rag_top_k must be greater than zero")
         if rag_max_context_chars <= 0:
             raise ValueError("rag_max_context_chars must be greater than zero")
+        if memory_top_k <= 0:
+            raise ValueError("memory_top_k must be greater than zero")
+        if memory_max_context_chars <= 0:
+            raise ValueError("memory_max_context_chars must be greater than zero")
         self._engine = engine
         self._session = session or ChatSession()
         self._rag_pipeline = rag_pipeline
         self._rag_top_k = rag_top_k
         self._rag_max_context_chars = rag_max_context_chars
+        self._memory_store = memory_store
+        self._memory_top_k = memory_top_k
+        self._memory_max_context_chars = memory_max_context_chars
 
     @property
     def session(self) -> ChatSession:
@@ -50,7 +61,18 @@ class PersonalAssistant:
                 top_k=self._rag_top_k,
                 max_chars=self._rag_max_context_chars,
             )
-        return self._session.build_prompt(user_message, retrieved_context=context)
+        memory_context = None
+        if self._memory_store is not None:
+            memory_context = self._memory_store.build_context(
+                user_message,
+                limit=self._memory_top_k,
+                max_chars=self._memory_max_context_chars,
+            )
+        return self._session.build_prompt(
+            user_message,
+            retrieved_context=context,
+            memory_context=memory_context,
+        )
 
     def chat(
         self,

@@ -19,3 +19,12 @@
 ## Scope and limitations
 
 This step builds the storage layer only. Automatic recall/injection and explicit CLI memory-management commands are implemented in the following Phase 8 verification gates. Search is local lexical matching, not semantic vector retrieval.
+
+## Step 8B: explicit memory recall
+
+- PersonalAssistant can optionally receive a MemoryStore and recall relevant saved notes for normal and streaming chat.
+- Saved memories enter a separate, bounded `<memory_context>` block and are identified as reference notes, not instructions.
+- Stored markup is escaped before prompt insertion.
+- Recall is opt-in and lexical; ordinary chat without a MemoryStore keeps the same prompt behavior.
+- User and assistant turns are not added to persistent memory. Saving remains a separate explicit operation.
+- Common query stopwords are ignored during lexical memory search to reduce matches on generic wording.
