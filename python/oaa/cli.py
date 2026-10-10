@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+import json
 import sys
 from collections.abc import Sequence
 
@@ -9,6 +10,8 @@ from .config import GenerationConfig
 from .engine import Engine
 from .memory import MemoryStore
 from .rag import RAGPipeline
+from .tools import ToolPolicy
+from .tools.builtins import create_builtin_registry
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -106,6 +109,24 @@ def build_parser() -> argparse.ArgumentParser:
         "--yes", action="store_true",
         help="confirm permanent deletion of all logical memory records",
     )
+
+    tools_parser = subparsers.add_parser("tools", help="list and run allow-listed local tools")
+    tools_actions = tools_parser.add_subparsers(dest="tools_action", required=True)
+
+    def add_workspace_option(command: argparse.ArgumentParser) -> None:
+        command.add_argument(
+            "--workspace",
+            help="explicit directory allowed for read_text_file",
+        )
+
+    tools_list = tools_actions.add_parser("list", help="list available local tools")
+    add_workspace_option(tools_list)
+
+    tools_run = tools_actions.add_parser("run", help="run one explicitly named local tool")
+    tools_run.add_argument("tool_name")
+    tools_run.add_argument("--args", default="{}", help="tool arguments encoded as a JSON object")
+    tools_run.add_argument("--max-output-chars", type=int, default=8192)
+    add_workspace_option(tools_run)
 
     return parser
 
@@ -298,6 +319,41 @@ def run_memory(args: argparse.Namespace) -> int:
     raise ValueError("unsupported memory action")
 
 
+def run_tools(args: argparse.Namespace) -> int:
+    registry = create_builtin_registry(workspace=args.workspace)
+
+    if args.tools_action == "list":
+        for tool in registry.list_tools():
+            print(f"{tool.name} [{tool.capability}] - {tool.description}")
+        return 0
+
+    try:
+        tool_arguments = json.loads(args.args)
+    except json.JSONDecodeError as exc:
+        raise ValueError(f"--args must be valid JSON: {exc.msg}") from exc
+
+    tool = registry.get(args.tool_name)
+    # A run command is an explicit user request for this exact tool. This
+    # policy still limits execution to that name and its declared capability.
+    policy = ToolPolicy(
+        allowed_tools=frozenset({tool.name}),
+        allowed_capabilities=frozenset({tool.capability}),
+    )
+    result = registry.execute(
+        tool.name,
+        tool_arguments,
+        policy=policy,
+        max_output_chars=args.max_output_chars,
+    )
+    if not result.success:
+        print(f"Tool '{result.name}' failed: {result.error}", file=sys.stderr)
+        return 1
+    print(json.dumps(result.output, ensure_ascii=False, allow_nan=False))
+    if result.truncated:
+        print("Note: tool output was truncated to the configured limit.", file=sys.stderr)
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -311,8 +367,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_search(args)
         if args.command == "memory":
             return run_memory(args)
+        if args.command == "tools":
+            return run_tools(args)
         parser.error("unknown command")
-    except (RuntimeError, ValueError, TypeError, OSError) as exc:
+    except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 

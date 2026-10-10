@@ -25,3 +25,11 @@ The CLI only invokes the named tool on explicit user command. Tool registry poli
 ## Future extensions
 
 Phase 10 may let a personal agent propose tool calls, but those calls should still be parsed, validated, and checked against the same explicit permission policy. Destructive or network tools should require additional consent and should not be registered by default.
+
+
+## Step 9C: explicit tool CLI
+
+- `genai tools list` lists registered tools without invoking their handlers. The read-file tool appears only when `--workspace` points to an existing local directory.
+- `genai tools run <tool> --args '<JSON object>'` invokes one explicitly named tool after parsing its JSON arguments.
+- The CLI creates a policy scoped to that named tool and its declared capability for this explicit invocation.
+- Invalid JSON/schema, denied paths, unsafe math, handler failures, and oversized outputs are reported without falling back to shell execution.

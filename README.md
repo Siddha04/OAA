@@ -114,3 +114,21 @@ Enable recall during local chat:
     genai chat --model ./tiny.manifest --memory-db ./.oaa/memory.sqlite3
 
 The database is local and ignored by Git. This implementation does not encrypt it, so do not store passwords, tokens, or other highly sensitive information. SQLite deletion removes logical records but is not a guarantee of secure physical erasure.
+
+
+## Controlled local tools (Phase 9)
+
+List available local tools:
+
+    genai tools list
+    genai tools list --workspace ./knowledge
+
+Run the bounded arithmetic calculator:
+
+    genai tools run calculator --args '{"expression":"(2 + 3) * 4"}'
+
+Read a text file only from an explicitly selected workspace:
+
+    genai tools run read_text_file --workspace ./knowledge --args '{"path":"manual.md"}'
+
+The calculator accepts arithmetic only and does not execute Python code. The file reader is read-only, limits file size, rejects hidden/generated paths, and refuses paths that resolve outside the selected workspace. A tool must pass the tool-name and capability allow-list. The CLI invokes only the tool explicitly named by the user; no shell or network tool is registered by default.
