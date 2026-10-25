@@ -60,7 +60,7 @@ def test_dataset_limits_and_empty_files_are_rejected(tmp_path: Path):
     write_jsonl(path, [row("A", "B")])
     with pytest.raises(DatasetValidationError, match="max_dataset_bytes"):
         load_sft_jsonl(path, max_dataset_bytes=1)
-    with pytest.raises(DatasetValidationError, match="max_examples"):
+    with pytest.raises(ValueError, match="max_examples"):
         load_sft_jsonl(path, max_examples=0)  # invalid limit configuration
     path.write_text("", encoding="utf-8")
     with pytest.raises(DatasetValidationError, match="empty"):
