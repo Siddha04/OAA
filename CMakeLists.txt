@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OAA VERSION 0.11.0 LANGUAGES CXX)
+project(OAA VERSION 0.12.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -60,7 +60,7 @@ endif()
 # Standalone native CLI: this target has no Python or pybind11 dependency.
 add_executable(oaa_native_cli cpp/src/cli_main.cpp)
 target_link_libraries(oaa_native_cli PRIVATE oaa_core)
-target_compile_definitions(oaa_native_cli PRIVATE OAA_VERSION="0.11.0")
+target_compile_definitions(oaa_native_cli PRIVATE OAA_VERSION="${PROJECT_VERSION}")
 install(TARGETS oaa_native_cli RUNTIME DESTINATION bin)
 
 include(CTest)

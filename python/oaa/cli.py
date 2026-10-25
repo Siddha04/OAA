@@ -8,6 +8,7 @@ from collections.abc import Sequence
 
 from .agent import PersonalAgent
 from .assistant import PersonalAssistant
+from .backend import RuntimeEngineBackend
 from .config import GenerationConfig
 from .engine import Engine
 from .evaluation import evaluate_cases, evaluation_dataset_sha256, load_evaluation_jsonl
@@ -206,6 +207,12 @@ def build_parser() -> argparse.ArgumentParser:
     evaluate.add_argument("--max-dataset-bytes", type=int, default=25 * 1024 * 1024)
     evaluate.add_argument("--overwrite", action="store_true", help="allow replacing an existing report")
     add_generation_options(evaluate)
+
+
+    runtime_info = subparsers.add_parser(
+        "runtime-info", help="report the currently supported backend capabilities"
+    )
+    runtime_info.add_argument("--model", required=True, help="local model manifest to load for inspection")
 
     return parser
 
@@ -604,6 +611,30 @@ def run_evaluate(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def run_runtime_info(args: argparse.Namespace) -> int:
+    engine = Engine()
+    engine.load_model(args.model)
+    capabilities = RuntimeEngineBackend(engine).capabilities
+    from .cuda import available as cuda_available, compiled as cuda_compiled
+
+    print(json.dumps({
+        "backend": capabilities.to_dict(),
+        "engine_loaded": engine.loaded,
+        "cuda": {
+            "compiled": cuda_compiled(),
+            "available": cuda_available(),
+        },
+        "known_limitations": [
+            "No pretrained checkpoint loading is implemented.",
+            "No true token-by-token streaming is implemented by the current native generator.",
+            "No native structured tool-call decoding is implemented.",
+            "Vision and audio preprocessing exist, but no vision/ASR/TTS model is bundled.",
+        ],
+    }, ensure_ascii=False, allow_nan=False, indent=2))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -627,6 +658,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_train_data(args)
         if args.command == "evaluate":
             return run_evaluate(args)
+        if args.command == "runtime-info":
+            return run_runtime_info(args)
         parser.error("unknown command")
     except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)

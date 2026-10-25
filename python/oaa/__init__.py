@@ -1,6 +1,7 @@
 """Python interface for the OAA runtime."""
 
 from .assistant import PersonalAssistant
+from .backend import BackendCapabilities, GenerationResult, GenerationService, RuntimeEngineBackend
 from .config import GenerationConfig
 from .cuda import available as cuda_available
 from .cuda import compiled as cuda_compiled
@@ -13,6 +14,10 @@ __all__ = [
     "Engine",
     "GenerationConfig",
     "PersonalAssistant",
+    "BackendCapabilities",
+    "GenerationResult",
+    "GenerationService",
+    "RuntimeEngineBackend",
     "ChatMessage",
     "ChatSession",
     "cuda_available",
@@ -27,4 +32,4 @@ __all__ = [
     "synthesize_speech",
     "write_wav",
 ]
-__version__ = "0.8.0"
+__version__ = "0.12.0"

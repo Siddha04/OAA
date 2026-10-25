@@ -61,6 +61,7 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 12: local SFT JSONL validation, duplicate detection, dataset fingerprints, and deterministic train/validation/test splitting. Weight optimization is not implemented yet.
 - Phase 13: local reference-based evaluation, string-match/token-overlap metrics, latency percentiles, and privacy-minimizing JSON reports.
 - Phase 14: standalone C++ executable with local manifest loading, generation controls, help/version output, install target, and CTest smoke coverage.
+- Phase 15: capability-aware backend contracts, bounded generation budgets, privacy-minimizing runtime metrics, and a pluggable structured agent-plan provider contract. These are extension points, not a pretrained-model integration.
 
 ## Phase 7 limitations
 
@@ -213,3 +214,23 @@ Run native inference on a local manifest:
     ./build-native/oaa_native_cli --model ./tiny.manifest --prompt "Hello OAA" --max-tokens 24 --temperature 0
 
 Show help/version with --help or --version. The executable depends only on the C++ runtime, not Python/pybind11. It currently supports the deterministic tiny_transformer_v1 manifest; it does not yet load production checkpoint formats such as GGUF or Safetensors.
+
+
+## Backend capability diagnostics (Phase 15)
+
+Inspect what the current runtime actually supports:
+
+    genai runtime-info --model ./tiny.manifest
+
+Use the reusable generation-service API to add request-size and output-budget checks around an injected backend:
+
+    from oaa import Engine, GenerationConfig, GenerationService, RuntimeEngineBackend
+
+    engine = Engine()
+    engine.load_model("./tiny.manifest")
+    service = GenerationService(RuntimeEngineBackend(engine), max_output_tokens=128)
+    result = service.generate("Hello", GenerationConfig(max_tokens=16))
+    print(result.text)
+    print(result.metrics())  # excludes prompt and generated text
+
+A future agent planner can implement the AgentPlanProvider protocol. Its proposed JSON plan must still pass the current registry's schema and tool-policy checks, and execution remains separately approval-gated. No current model is advertised as tool-call capable.

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import copy
 import json
 from collections.abc import Callable, Mapping
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Protocol
 
 from .tools.registry import (
     ToolExecutionResult,
@@ -150,6 +151,22 @@ class AgentStepResult:
 ApprovalCallback = Callable[[AgentToolCall], bool]
 
 
+class AgentPlanProvider(Protocol):
+    """Adapter contract for a planner that returns structured JSON proposals.
+
+    Implementations may wrap a local LLM, constrained decoder, or remote service;
+    the caller must choose that provider explicitly. Returned plans still pass
+    through PersonalAgent.prepare_plan and never execute during proposal.
+    """
+
+    def propose_plan(
+        self,
+        goal: str,
+        tools: tuple[dict[str, Any], ...],
+    ) -> Mapping[str, Any]:
+        """Return a JSON-compatible plan for the exact supplied goal."""
+
+
 class PersonalAgent:
     """Run a fixed, bounded plan only after policy checks and per-step approval.
 
@@ -200,6 +217,35 @@ class PersonalAgent:
             tool = self._registry.get(step.tool_name)
             validate_arguments(step.arguments, tool.parameters)
         return plan
+
+
+    def propose_plan(self, goal: str, provider: AgentPlanProvider) -> AgentPlan:
+        """Ask an explicitly supplied planner for a plan, then validate without execution."""
+        if not isinstance(goal, str) or not goal.strip():
+            raise ValueError("goal must be a non-empty string")
+        if len(goal) > MAX_PLAN_GOAL_CHARS:
+            raise ValueError(f"goal exceeds {MAX_PLAN_GOAL_CHARS} characters")
+        proposer = getattr(provider, "propose_plan", None)
+        if not callable(proposer):
+            raise TypeError("provider must implement propose_plan(goal, tools)")
+
+        specifications = tuple(
+            {
+                "name": tool.name,
+                "description": tool.description,
+                "capability": tool.capability,
+                "parameters": copy.deepcopy(dict(tool.parameters)),
+            }
+            for tool in self._registry.list_tools()
+        )
+        payload = proposer(goal, specifications)
+        if not isinstance(payload, Mapping):
+            raise ValueError("planner must return a plan object")
+        if "goal" in payload and payload["goal"] != goal:
+            raise ValueError("planner returned a goal different from the requested goal")
+        normalized = dict(payload)
+        normalized["goal"] = goal
+        return self.prepare_plan(normalized)
 
     def run_plan(
         self,
