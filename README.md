@@ -58,6 +58,7 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 9: a deny-by-default tool registry, bounded calculator, workspace-scoped read-only text reader, and explicit tool CLI.
 - Phase 10: structured Personal Agent plans with bounded steps, schema checks, an exact tool allow-list, and per-step user approval.
 - Phase 11: bounded local image/WAV ingestion, normalized PCM access, and explicit speech-model adapter contracts; no pretrained vision or speech model is bundled.
+- Phase 12: local SFT JSONL validation, duplicate detection, dataset fingerprints, and deterministic train/validation/test splitting. Weight optimization is not implemented yet.
 
 ## Phase 7 limitations
 
@@ -161,3 +162,22 @@ Inspect a local uncompressed PCM WAV file:
 The Python API is available from the oaa.media module or via the package exports load_image, load_wav, transcribe_audio, and synthesize_speech. WAV input supports mono/stereo PCM with 8–192 kHz sample rates and bounded duration/file size. Images and audio are read from local paths; no camera, microphone, network or cloud API is accessed.
 
 This phase prepares media and defines explicit SpeechToTextBackend / TextToSpeechBackend adapter contracts, but does not bundle a vision encoder, OCR engine, ASR model, TTS model, or model-driven image/audio understanding. Calling speech transcription or synthesis without supplying a backend fails clearly instead of silently connecting to a service.
+
+
+## Fine-tuning data preparation (Phase 12)
+
+SFT input is a local UTF-8 JSONL file with one JSON object per line. Each record needs "instruction" and "output" string fields; "input" is optional. Example record:
+
+    {"instruction":"Summarize the note","input":"A local note","output":"A short summary."}
+
+Validate the data before using it:
+
+    genai train-data validate --path D:/oaa-data/sft.jsonl
+
+Create deterministic splits outside the checkout:
+
+    genai train-data split --path D:/oaa-data/sft.jsonl --output-dir D:/oaa-data/splits --seed 42
+
+The split command refuses to write into a non-empty directory. Exact duplicate records are removed by default. Validation includes bounded file/record sizes and a SHA-256 fingerprint. Keep private datasets and generated split files outside the Git working tree and never commit them.
+
+This is data preparation, not model fine-tuning. The current C++ transformer has no gradient/backpropagation, optimizer, checkpoint loading, or weight-saving support. No accuracy gain is claimed from this phase.

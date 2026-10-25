@@ -15,6 +15,7 @@ from .media import load_image, load_wav
 from .rag import RAGPipeline
 from .tools import ToolPolicy
 from .tools.builtins import create_builtin_registry
+from .training import load_sft_jsonl, split_sft_examples, write_sft_splits
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -171,6 +172,27 @@ def build_parser() -> argparse.ArgumentParser:
     audio_info.add_argument("--path", required=True, help="path to a local WAV file")
     audio_info.add_argument("--max-file-bytes", type=int, default=40 * 1024 * 1024)
     audio_info.add_argument("--max-duration-seconds", type=float, default=60.0)
+
+
+    train_data = subparsers.add_parser(
+        "train-data", help="validate and split local supervised fine-tuning JSONL data"
+    )
+    train_actions = train_data.add_subparsers(dest="train_data_action", required=True)
+
+    train_validate = train_actions.add_parser("validate", help="validate a local SFT JSONL file")
+    train_validate.add_argument("--path", required=True)
+    train_validate.add_argument("--max-dataset-bytes", type=int, default=100 * 1024 * 1024)
+    train_validate.add_argument("--max-examples", type=int, default=200_000)
+    train_validate.add_argument("--keep-duplicates", action="store_true")
+
+    train_split = train_actions.add_parser("split", help="write deterministic train/validation/test splits")
+    train_split.add_argument("--path", required=True)
+    train_split.add_argument("--output-dir", required=True)
+    train_split.add_argument("--validation-fraction", type=float, default=0.1)
+    train_split.add_argument("--test-fraction", type=float, default=0.1)
+    train_split.add_argument("--seed", type=int, default=42)
+    train_split.add_argument("--max-dataset-bytes", type=int, default=100 * 1024 * 1024)
+    train_split.add_argument("--max-examples", type=int, default=200_000)
 
     return parser
 
@@ -497,6 +519,34 @@ def run_media(args: argparse.Namespace) -> int:
     raise ValueError("unsupported media action")
 
 
+
+def run_train_data(args: argparse.Namespace) -> int:
+    examples, report = load_sft_jsonl(
+        args.path,
+        max_dataset_bytes=args.max_dataset_bytes,
+        max_examples=args.max_examples,
+        deduplicate=not getattr(args, "keep_duplicates", False),
+    )
+    if args.train_data_action == "validate":
+        print(json.dumps(report.to_dict(), ensure_ascii=False, allow_nan=False, indent=2))
+        return 0
+    splits = split_sft_examples(
+        examples,
+        validation_fraction=args.validation_fraction,
+        test_fraction=args.test_fraction,
+        seed=args.seed,
+    )
+    output_paths = write_sft_splits(splits, args.output_dir)
+    print(json.dumps({
+        "dataset_report": report.to_dict(),
+        "split_counts": {name: len(values) for name, values in splits.items()},
+        "output_paths": output_paths,
+        "seed": args.seed,
+        "note": "Data remains local. This command prepares data; it does not train model weights.",
+    }, ensure_ascii=False, allow_nan=False, indent=2))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -516,6 +566,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_agent(args)
         if args.command == "media":
             return run_media(args)
+        if args.command == "train-data":
+            return run_train_data(args)
         parser.error("unknown command")
     except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)
