@@ -60,6 +60,7 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 11: bounded local image/WAV ingestion, normalized PCM access, and explicit speech-model adapter contracts; no pretrained vision or speech model is bundled.
 - Phase 12: local SFT JSONL validation, duplicate detection, dataset fingerprints, and deterministic train/validation/test splitting. Weight optimization is not implemented yet.
 - Phase 13: local reference-based evaluation, string-match/token-overlap metrics, latency percentiles, and privacy-minimizing JSON reports.
+- Phase 14: standalone C++ executable with local manifest loading, generation controls, help/version output, install target, and CTest smoke coverage.
 
 ## Phase 7 limitations
 
@@ -197,3 +198,18 @@ Run evaluation against the current local model manifest:
 The report records dataset SHA-256, exact/substring reference matching, token-overlap precision/recall/F1, and latency percentiles. It intentionally does not include raw prompts or generated outputs. An existing report is not replaced unless --overwrite is passed.
 
 These are task-specific reference string diagnostics and timing—not a general model accuracy, safety, reasoning, or truthfulness score. The tiny seeded transformer is not a pretrained conversational LLM.
+
+
+## Standalone native C++ CLI (Phase 14)
+
+Configure and build without Python bindings:
+
+    cmake -S . -B build-native -DOAA_BUILD_PYTHON_BINDINGS=OFF -DBUILD_TESTING=ON
+    cmake --build build-native --config Release
+    ctest --test-dir build-native --output-on-failure -C Release
+
+Run native inference on a local manifest:
+
+    ./build-native/oaa_native_cli --model ./tiny.manifest --prompt "Hello OAA" --max-tokens 24 --temperature 0
+
+Show help/version with --help or --version. The executable depends only on the C++ runtime, not Python/pybind11. It currently supports the deterministic tiny_transformer_v1 manifest; it does not yet load production checkpoint formats such as GGUF or Safetensors.

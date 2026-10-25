@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(OAA VERSION 0.4.0 LANGUAGES CXX)
+project(OAA VERSION 0.11.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -56,6 +56,13 @@ elseif(NOT OAA_BUILD_CUDA)
     target_compile_options(oaa_core PRIVATE -Wall -Wextra -Wpedantic)
 endif()
 
+
+# Standalone native CLI: this target has no Python or pybind11 dependency.
+add_executable(oaa_native_cli cpp/src/cli_main.cpp)
+target_link_libraries(oaa_native_cli PRIVATE oaa_core)
+target_compile_definitions(oaa_native_cli PRIVATE OAA_VERSION="0.11.0")
+install(TARGETS oaa_native_cli RUNTIME DESTINATION bin)
+
 include(CTest)
 
 if(BUILD_TESTING)
@@ -82,6 +89,22 @@ if(BUILD_TESTING)
     )
     target_link_libraries(oaa_cuda_tests PRIVATE oaa_core)
     add_test(NAME oaa_cuda_tests COMMAND oaa_cuda_tests)
+    add_test(NAME oaa_native_cli_help COMMAND oaa_native_cli --help)
+    set(OAA_NATIVE_CLI_TEST_MANIFEST "${CMAKE_CURRENT_BINARY_DIR}/oaa_native_cli_test.manifest")
+    file(WRITE "${OAA_NATIVE_CLI_TEST_MANIFEST}"
+        "architecture=tiny_transformer_v1\n"
+        "vocab_size=95\n"
+        "hidden_size=16\n"
+        "num_layers=1\n"
+        "num_heads=4\n"
+        "intermediate_size=32\n"
+        "context_length=64\n"
+        "seed=9\n")
+    add_test(
+        NAME oaa_native_cli_generate
+        COMMAND oaa_native_cli --model "${OAA_NATIVE_CLI_TEST_MANIFEST}"
+                --prompt "Hello" --max-tokens 4 --temperature 0
+    )
 endif()
 
 if(OAA_BUILD_PYTHON_BINDINGS)
