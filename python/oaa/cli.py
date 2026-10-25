@@ -10,6 +10,7 @@ from .agent import PersonalAgent
 from .assistant import PersonalAssistant
 from .config import GenerationConfig
 from .engine import Engine
+from .evaluation import evaluate_cases, evaluation_dataset_sha256, load_evaluation_jsonl
 from .memory import MemoryStore
 from .media import load_image, load_wav
 from .rag import RAGPipeline
@@ -193,6 +194,18 @@ def build_parser() -> argparse.ArgumentParser:
     train_split.add_argument("--seed", type=int, default=42)
     train_split.add_argument("--max-dataset-bytes", type=int, default=100 * 1024 * 1024)
     train_split.add_argument("--max-examples", type=int, default=200_000)
+
+
+    evaluate = subparsers.add_parser(
+        "evaluate", help="run a local reference-based evaluation and write a metrics report"
+    )
+    evaluate.add_argument("--model", required=True, help="local model manifest")
+    evaluate.add_argument("--dataset", required=True, help="local evaluation JSONL file")
+    evaluate.add_argument("--report", required=True, help="output JSON report path")
+    evaluate.add_argument("--max-cases", type=int, default=2000)
+    evaluate.add_argument("--max-dataset-bytes", type=int, default=25 * 1024 * 1024)
+    evaluate.add_argument("--overwrite", action="store_true", help="allow replacing an existing report")
+    add_generation_options(evaluate)
 
     return parser
 
@@ -547,6 +560,50 @@ def run_train_data(args: argparse.Namespace) -> int:
     return 0
 
 
+
+def run_evaluate(args: argparse.Namespace) -> int:
+    cases = load_evaluation_jsonl(
+        args.dataset,
+        max_cases=args.max_cases,
+        max_dataset_bytes=args.max_dataset_bytes,
+    )
+    source_path = Path(args.dataset).expanduser().resolve()
+    report_path = Path(args.report).expanduser()
+    if report_path.resolve() == source_path:
+        raise ValueError("report path must not overwrite the evaluation dataset")
+    if report_path.exists() and not args.overwrite:
+        raise FileExistsError(
+            f"report already exists: {report_path}; pass --overwrite to replace it"
+        )
+
+    engine = Engine()
+    engine.load_model(args.model)
+    config = build_config(args)
+    report = evaluate_cases(
+        cases,
+        lambda prompt: engine.generate(prompt, config),
+        dataset_sha256=evaluation_dataset_sha256(source_path),
+    )
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    # Recheck the path immediately before writing; overwrite requires explicit consent.
+    if report_path.exists() and not args.overwrite:
+        raise FileExistsError(f"report already exists: {report_path}")
+    report_path.write_text(
+        json.dumps(report.to_dict(), ensure_ascii=False, allow_nan=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    print(json.dumps({
+        "report": str(report_path.resolve()),
+        "case_count": report.case_count,
+        "exact_match_rate": round(report.exact_match_rate, 6),
+        "expected_substring_rate": round(report.expected_substring_rate, 6),
+        "mean_token_f1": round(report.mean_token_f1, 6),
+        "mean_latency_seconds": round(report.mean_latency_seconds, 6),
+        "note": "Reference-matching diagnostics are not general model accuracy.",
+    }, ensure_ascii=False, allow_nan=False, indent=2))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -568,6 +625,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_media(args)
         if args.command == "train-data":
             return run_train_data(args)
+        if args.command == "evaluate":
+            return run_evaluate(args)
         parser.error("unknown command")
     except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)

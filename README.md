@@ -59,6 +59,7 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 10: structured Personal Agent plans with bounded steps, schema checks, an exact tool allow-list, and per-step user approval.
 - Phase 11: bounded local image/WAV ingestion, normalized PCM access, and explicit speech-model adapter contracts; no pretrained vision or speech model is bundled.
 - Phase 12: local SFT JSONL validation, duplicate detection, dataset fingerprints, and deterministic train/validation/test splitting. Weight optimization is not implemented yet.
+- Phase 13: local reference-based evaluation, string-match/token-overlap metrics, latency percentiles, and privacy-minimizing JSON reports.
 
 ## Phase 7 limitations
 
@@ -181,3 +182,18 @@ Create deterministic splits outside the checkout:
 The split command refuses to write into a non-empty directory. Exact duplicate records are removed by default. Validation includes bounded file/record sizes and a SHA-256 fingerprint. Keep private datasets and generated split files outside the Git working tree and never commit them.
 
 This is data preparation, not model fine-tuning. The current C++ transformer has no gradient/backpropagation, optimizer, checkpoint loading, or weight-saving support. No accuracy gain is claimed from this phase.
+
+
+## Local evaluation and benchmarking (Phase 13)
+
+Use a local JSONL file with one {"prompt":"...", "expected":"..."} record per line (optional "category"):
+
+    {"prompt":"Return the word hello","expected":"hello","category":"format"}
+
+Run evaluation against the current local model manifest:
+
+    genai evaluate --model ./tiny.manifest --dataset D:/oaa-data/eval.jsonl --report D:/oaa-results/eval-report.json --max-tokens 16
+
+The report records dataset SHA-256, exact/substring reference matching, token-overlap precision/recall/F1, and latency percentiles. It intentionally does not include raw prompts or generated outputs. An existing report is not replaced unless --overwrite is passed.
+
+These are task-specific reference string diagnostics and timing—not a general model accuracy, safety, reasoning, or truthfulness score. The tiny seeded transformer is not a pretrained conversational LLM.
