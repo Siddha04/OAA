@@ -7,13 +7,14 @@ build-backend = "scikit_build_core.build"
 
 [project]
 name = "oaa"
-version = "0.12.0"
+version = "0.13.0"
 description = "Personal local-first GenAI runtime"
 requires-python = ">=3.10"
 
 [project.optional-dependencies]
 test = ["pytest>=8.0", "Pillow>=10.0"]
 vision = ["Pillow>=10.0"]
+gguf = ["llama-cpp-python>=0.3.37"]
 rag = ["pypdf>=5.0"]
 
 [project.scripts]

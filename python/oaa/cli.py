@@ -214,6 +214,37 @@ def build_parser() -> argparse.ArgumentParser:
     )
     runtime_info.add_argument("--model", required=True, help="local model manifest to load for inspection")
 
+
+
+    def add_gguf_model_options(command: argparse.ArgumentParser) -> None:
+        command.add_argument("--model", required=True, help="explicit local GGUF checkpoint file")
+        command.add_argument("--n-ctx", type=int, default=4096)
+        command.add_argument("--n-gpu-layers", type=int, default=0)
+        command.add_argument("--n-threads", type=int)
+        command.add_argument("--chat-format", help="optional llama.cpp chat format override")
+        command.add_argument("--verbose-backend", action="store_true")
+
+    gguf_ask = subparsers.add_parser(
+        "gguf-ask", help="run one request with an explicit local GGUF checkpoint"
+    )
+    add_gguf_model_options(gguf_ask)
+    gguf_ask.add_argument("--system", default="You are OAA, a local personal AI assistant.")
+    gguf_ask.add_argument("prompt")
+    add_generation_options(gguf_ask)
+
+    gguf_chat = subparsers.add_parser(
+        "gguf-chat", help="start a streaming chat with a local GGUF checkpoint"
+    )
+    add_gguf_model_options(gguf_chat)
+    gguf_chat.add_argument("--system", default="You are OAA, a local personal AI assistant.")
+    gguf_chat.add_argument("--max-history-messages", type=int, default=32)
+    add_generation_options(gguf_chat)
+
+    gguf_info = subparsers.add_parser(
+        "gguf-info", help="load a local GGUF checkpoint and report metadata/capabilities"
+    )
+    add_gguf_model_options(gguf_info)
+
     return parser
 
 
@@ -660,6 +691,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             return run_evaluate(args)
         if args.command == "runtime-info":
             return run_runtime_info(args)
+        if args.command == "gguf-ask":
+            return run_gguf_ask(args)
+        if args.command == "gguf-chat":
+            return run_gguf_chat(args)
+        if args.command == "gguf-info":
+            return run_gguf_info(args)
         parser.error("unknown command")
     except (RuntimeError, ValueError, TypeError, OSError, KeyError) as exc:
         print(f"error: {exc}", file=sys.stderr)

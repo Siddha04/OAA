@@ -61,7 +61,8 @@ The search and chat commands read documents from the selected local directory. D
 - Phase 12: local SFT JSONL validation, duplicate detection, dataset fingerprints, and deterministic train/validation/test splitting. Weight optimization is not implemented yet.
 - Phase 13: local reference-based evaluation, string-match/token-overlap metrics, latency percentiles, and privacy-minimizing JSON reports.
 - Phase 14: standalone C++ executable with local manifest loading, generation controls, help/version output, install target, and CTest smoke coverage.
-- Phase 15: capability-aware backend contracts, bounded generation budgets, privacy-minimizing runtime metrics, and a pluggable structured agent-plan provider contract. These are extension points, not a pretrained-model integration.
+- Phase 15: capability-aware backend contracts, bounded generation budgets, privacy-minimizing runtime metrics, and a pluggable structured agent-plan provider contract.
+- Phase 16: optional llama-cpp-python backend for explicit local GGUF checkpoint loading, chat completion, incremental response chunks, and backend metadata reporting. Real-model quality/hardware verification still requires a user-supplied checkpoint.
 
 ## Phase 7 limitations
 
@@ -234,3 +235,22 @@ Use the reusable generation-service API to add request-size and output-budget ch
     print(result.metrics())  # excludes prompt and generated text
 
 A future agent planner can implement the AgentPlanProvider protocol. Its proposed JSON plan must still pass the current registry's schema and tool-policy checks, and execution remains separately approval-gated. No current model is advertised as tool-call capable.
+
+
+## Real local GGUF inference (Phase 16)
+
+Install the optional backend:
+
+    python -m pip install "oaa[gguf]"
+
+Keep GGUF files in an ignored local model directory; do not commit weights. Inspect a checkpoint and launch chat:
+
+    genai gguf-info --model ./models/instruct-model.gguf --n-ctx 4096
+    genai gguf-ask --model ./models/instruct-model.gguf --max-tokens 128 "Explain local inference."
+    genai gguf-chat --model ./models/instruct-model.gguf --n-ctx 4096 --n-gpu-layers 0
+
+The GGUF adapter uses llama-cpp-python and accepts only an existing local .gguf file. It uses model/chat-template metadata unless an explicit --chat-format override is supplied. Start with --n-gpu-layers 0 for CPU; increase only after verifying the target GPU backend is installed and operational. The number of requested GPU layers is not proof of actual GPU offload.
+
+llama-cpp-python builds native llama.cpp bindings and may require a C/C++ toolchain. For OS- and accelerator-specific installation options, consult the upstream instructions at https://pypi.org/project/llama-cpp-python/ and API reference at https://llama-cpp-python.readthedocs.io/en/latest/api-reference/.
+
+The adapter supports chat and response streaming but does not automatically enable tool calling or multimodal inference. It reports checkpoint loading separately from verified pretrained provenance. A genuine end-to-end acceptance run still needs a trusted, licensed GGUF file on the intended hardware; CI tests the adapter contract with a mock so model weights are never stored in the repository.
