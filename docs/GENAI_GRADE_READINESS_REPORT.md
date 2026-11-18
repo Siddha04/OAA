@@ -1,19 +1,19 @@
 # OAA — GenAI Readiness and Production-Grade Roadmap
 
-**Assessment date:** 25 October 2026  
+**Assessment date:** 19 November 2026  
 **Repository:** https://github.com/Siddha04/OAA  
 **Branch:** main  
-**Audited commit at report time:** ec4115a9a44923d3cdf6cd53e175a9b0e52ea6d6  
-**Package version:** 0.12.0  
-**Final CI run:** https://github.com/Siddha04/OAA/actions/runs/40178646291
+**Audited `main` commit at report time:** 7407e8cab444580597ac718b805d0f2b75d4d73e  
+**Package version:** 0.13.0  
+**Final CI run:** https://github.com/Siddha04/OAA/actions/runs/44385117371
 
 ## 1. Executive verdict
 
-OAA has completed the planned 15-stage engineering scaffold: a C++ runtime with a Python/pybind11 interface, local assistant and retrieval components, persistent memory, controlled tools, an approval-gated agent framework, media ingestion contracts, supervised-fine-tuning data preparation, reference-based evaluation, a standalone C++ CLI, and backend capability reporting.
+OAA has completed the original 15-stage engineering scaffold and added Phase 16: an optional local GGUF backend using llama-cpp-python. The project now has two inference paths: the seed-initialized tiny C++ model used as a deterministic CI fixture, and an optional adapter for loading a separately supplied GGUF checkpoint through llama.cpp.
 
-The latest GitHub Actions run passed all **6/6 C++ tests and 134 Python tests**, and built the Python wheel **oaa-0.12.0**. See the [verified final run](https://github.com/Siddha04/OAA/actions/runs/40178646291).
+The latest `main` GitHub Actions run passed **6/6 C++ tests and 142 Python tests**, and built the Python wheel **oaa-0.13.0**. See [verified final run #45](https://github.com/Siddha04/OAA/actions/runs/44385117371). The Phase 16 PR and post-merge workflow also passed. CI uses a fake llama.cpp binding; it does not load a real GGUF model file.
 
-**Important product verdict: OAA is a tested GenAI runtime prototype and orchestration scaffold, not yet a best-grade or production-capable conversational LLM.** The core transformer initializes weights from a manifest seed. It does not load pretrained model checkpoints, use a production tokenizer, perform gradient training, or deliver dependable natural-language reasoning. The media module prepares images and PCM audio but does not include vision, OCR, ASR, or TTS models. Most important next step: integrate a real, appropriately licensed pretrained model and then measure quality, safety, latency, and memory use against explicit acceptance criteria.
+**Important product verdict: OAA is a tested GenAI runtime prototype with an initial real-checkpoint integration, not yet a best-grade or production-capable assistant.** The optional GGUF adapter is implemented, but a real checkpoint, tokenizer/chat-template compatibility, coherent output, hardware acceleration, memory use and latency have not yet been validated on the target machine. The native tiny transformer remains seed-initialized. Fine-tuning, semantic RAG, vision, OCR, ASR and TTS models are still outstanding.
 
 “Best-grade GenAI” is not a test-count milestone. It requires a capable pretrained model, valid model weights and tokenizer, relevant real-world evaluations, controlled tool execution, secure data handling, stable packaging, and reproducible hardware benchmarks.
 
@@ -35,7 +35,8 @@ The latest GitHub Actions run passed all **6/6 C++ tests and 134 Python tests**,
 | 12. Fine-tuning preparation | Bounded SFT JSONL validation, duplicate detection, dataset hash, deterministic splits | No loss function, backpropagation, optimizer, LoRA/QLoRA, checkpoint save/load, or actual fine-tuning |
 | 13. Evaluation | Reference text matching, token overlap metrics, latency percentiles, report hash | Metrics are diagnostic string comparisons, not general accuracy, factuality, safety, or reasoning scores |
 | 14. Native CLI | Standalone C++ executable, command parsing, manifest-load/generation smoke test, CMake install target | Only the tiny seed-initialized model family is supported |
-| 15. Backend contracts | Capability reporting, generation budgets/telemetry, pluggable structured plan-provider contract | These are extension points, not a production model backend or an autonomous LLM planner |
+| 15. Backend contracts | Capability reporting, generation budgets/telemetry, pluggable structured plan-provider contract | These are extension points, not a pretrained-model integration or autonomous LLM planner |
+| 16. GGUF inference adapter | Optional llama-cpp-python backend; local GGUF loading, chat-completion API, stream chunks, metadata, and CLI | CI is mocked; no real model file, target GPU, quality, or performance acceptance run yet |
 
 ## 3. Verification record
 
@@ -49,24 +50,27 @@ The most relevant completed gates for the final roadmap stages are listed below.
 | Phase 13 evaluation harness | 7d0baaf5b3eadd8372e99b94109b314220dfdec7 | [Run #35](https://github.com/Siddha04/OAA/actions/runs/40177844344) | 4/4 C++, 125 Python |
 | Phase 13 evaluation CLI | b32cca2782c627cdfa3461e19ba834b76af5029a | [Run #36](https://github.com/Siddha04/OAA/actions/runs/40177972567) | 4/4 C++, 128 Python |
 | Phase 14 native C++ CLI | c1eec86dfca59c06aab22b9978a3e1de6aa95517 | [Run #37](https://github.com/Siddha04/OAA/actions/runs/40178216105) | 6/6 C++, 128 Python |
-| Phase 15 backend/agent contracts | ec4115a9a44923d3cdf6cd53e175a9b0e52ea6d6 | [Run #38](https://github.com/Siddha04/OAA/actions/runs/40178646291) | **6/6 C++, 134 Python; wheel built** |
+| Phase 15 backend/agent contracts | ec4115a9a44923d3cdf6cd53e175a9b0e52ea6d6 | [Run #38](https://github.com/Siddha04/OAA/actions/runs/40178646291) | 6/6 C++, 134 Python |
+| Phase 16 GGUF adapter, feature branch | e8b9c647d65e44557bc3056209294183083e2cbe | [Run #40](https://github.com/Siddha04/OAA/actions/runs/44383612941) | 6/6 C++, 142 Python; wheel built |
+| Phase 16 merged `main` | 7407e8cab444580597ac718b805d0f2b75d4d73e | [Run #45](https://github.com/Siddha04/OAA/actions/runs/44385117371) | **6/6 C++, 142 Python; `oaa-0.13.0` wheel built** |
 
 Earlier gates for phases 1–10 are also represented in repository history and CI. These checks establish software integration and regression behavior. They do **not** demonstrate meaningful LLM quality, GPU acceleration, fine-tuning quality, semantic retrieval quality, or multimodal understanding.
 
 ## 4. Highest-priority gaps
 
-### P0 — Load and run a genuine pretrained language model
+### P0 — Validate real GGUF model inference on target hardware
 
-This is the blocker that dominates all others. The current seed-initialized transformer is useful for validating the runtime pipeline, but it is not a trained conversational model. More CLI commands, tests, or agent wrappers will not turn it into one.
+Phase 16 closes the first checkpoint-loading integration gap: OAA now has an optional `llama-cpp-python` adapter for a local GGUF file, with chat completion and incremental response chunks. It is not yet a completed end-to-end model acceptance gate because CI deliberately uses a mock backend and no user model file is stored in Git.
 
-Choose one of two architectural paths:
+Next:
+1. Choose one small, licensed instruct GGUF that fits the target PC's RAM/VRAM, record its model revision, tokenizer/chat template, quantization, license, origin and SHA-256 checksum.
+2. Install the optional backend using the appropriate CPU or GPU build of llama-cpp-python; verify the real native library loads and the expected CPU/GPU backend is active.
+3. Run `genai gguf-info`, then a real one-shot and streaming chat, and save a local evaluation report outside the repository.
+4. Measure model load time, peak RAM/VRAM, context handling, time-to-first-token, tokens/sec and output quality on held-out tasks. Compare the output to a known-good reference runner using the same model/template.
 
-1. **Practical product path (recommended):** keep OAA’s native runtime as a learning/research core, and add an optional production inference backend using a mature local inference engine. A GGUF-capable engine such as [llama.cpp](https://github.com/ggml-org/llama.cpp) already documents quantization, CPU/GPU backend choices, and local model execution. Wrap it with OAA’s backend capability contract and keep model loading, quantization, and tokenizer compatibility in that adapter.
-2. **Build-the-runtime-from-scratch path:** implement a verified weight-file format and loader, the correct tokenizer and chat template for the chosen model, architecture-specific tensor layouts/operators, rotary position encoding where required, KV-cache lifecycle, sampler compatibility, checkpoint validation, and memory accounting. Then test outputs against a reference implementation of the same checkpoint.
+The integration is optional; the original C++ tiny model remains useful as a deterministic test fixture. An alternative from-scratch runtime path would still require architecture-compatible weight loading, tokenizer and chat-template fidelity, tensor layouts/operators, checkpoint validation and memory accounting.
 
-Do not silently claim both routes are complete. Select a single reference model and architecture first, check model-weight terms and redistribution rights, record the exact model revision and file hashes, and use a known-good reference runner as the quality baseline.
-
-**Acceptance gate:** load a real pretrained model locally, verify tokenizer and checkpoint metadata, produce coherent responses on a held-out test set, reproduce known outputs or logits within stated tolerance where feasible, and report load time, peak RAM/VRAM, time-to-first-token, time-per-output-token, and tokens per second.
+**Acceptance gate:** a real user-supplied GGUF loads on the intended machine, its exact model/template/license/hash are recorded, one-shot and streaming responses are coherent on held-out tests, and load time, peak RAM/VRAM, TTFT, tokens/sec and hardware utilization are measured.
 
 ### P0 — Make inference genuinely efficient and bounded
 
@@ -164,7 +168,7 @@ The sequence below prioritizes useful model quality before investing further in 
 
 | Time window | Priority deliverables | Completion evidence |
 |---|---|---|
-| Days 1–15 | Choose a licensed instruct model and production backend; define supported OS/hardware; add real model loading and tokenizer path; preserve tiny model as a CI fixture | Local end-to-end coherent chat, documented model hashes/license, baseline hardware/memory metrics |
+| Days 1–15 | Select a licensed GGUF instruct checkpoint that fits target hardware; run the new Phase 16 adapter end-to-end; document model hash/license/chat template | Real local one-shot/streaming chat plus baseline quality, RAM/VRAM and latency results |
 | Days 16–30 | Build a real domain evaluation set; add model and RAG baselines; improve semantic retrieval and source citations | Reproducible report on held-out tasks, retrieval metrics, citation audit, no dataset committed |
 | Days 31–45 | Add an SFT backend using a mature trainer; connect prepared data and deterministic splits; add LoRA adapter save/load | Successful real fine-tune and checkpoint round-trip; base-vs-adapter comparison |
 | Days 46–60 | Add constrained model-planned tool calls, preserving approval and policy preflight; red-team security behavior | Tests show no unauthorized tool execution in adversarial/malformed plan cases |
@@ -213,3 +217,12 @@ These references informed the recommendations and are useful implementation star
 The planned engineering phases have reached a tested checkpoint. The main thing that prevents OAA from being a best-grade GenAI is **not another orchestration feature**: it is the absence of real pretrained model weights and tokenizer support, real training, high-quality semantic retrieval, true streaming/optimization, end-to-end multimodal models, and comprehensive quality/safety evaluation.
 
 The best next engineering investment is therefore: **select a real local model and inference backend, establish a rigorous held-out quality benchmark, then implement reproducible fine-tuning and secure model-driven tool use**. Preserve the existing OAA core, tests, local-first boundaries, and explicit permissions as the foundation around that model.
+
+
+## 9. Phase 16 update — real local GGUF adapter (19 November 2026)
+
+The repository now includes `python/oaa/backends/llama_cpp.py`, an optional `llama-cpp-python` integration. `genai gguf-info`, `genai gguf-ask`, and `genai gguf-chat` load an explicit local `.gguf` path; chat supports streamed response chunks. The adapter keeps model-generated text separate from tool execution. The optional dependency is installed with `python -m pip install "oaa[gguf]"`.
+
+The adapter uses llama.cpp's documented `Llama.create_chat_completion` API, including `stream`, `max_tokens`, sampling controls and chat-template selection from explicit format or model metadata. See the [upstream API reference](https://llama-cpp-python.readthedocs.io/en/latest/api-reference/) and [official package/installation documentation](https://pypi.org/project/llama-cpp-python/). PyPI lists llama-cpp-python 0.3.37 as released on 15 November 2026. The package supports multiple build backends; the upstream install guide describes HIP/ROCm for AMD and Vulkan as well as CPU and CUDA options. Actual support depends on the user's GPU, driver, toolchain and compatible wheel/build.
+
+**Remaining acceptance gate:** CI verifies the adapter with a fake `llama_cpp.Llama` object. It does not prove a real GGUF checkpoint will load, that a model is high quality, or that the chosen GPU will be used. Do not mark this acceptance gate complete until a real model run is recorded on the target machine.

@@ -10,7 +10,24 @@ The repository does not contain model files. A user must obtain a compatible GGU
 
     python -m pip install "oaa[gguf]"
 
-The llama-cpp-python package builds native llama.cpp bindings. A working C/C++ toolchain is required for source builds. Hardware-specific builds may use the documented CPU, CUDA, Metal, HIP/ROCm, or Vulkan options. Start with CPU inference to verify the model and chat template before enabling GPU offload.
+The llama-cpp-python package builds native llama.cpp bindings. A working C/C++ toolchain is required for source builds. Start with CPU inference to verify the model and chat template before enabling GPU offload.
+
+For a Windows AMD Radeon machine, the upstream project documents a HIP/Radeon wheel index and a Vulkan build option. The Vulkan build route can be configured in PowerShell as:
+
+    $env:CMAKE_ARGS = "-DGGML_VULKAN=on"
+    python -m pip install "oaa[gguf]"
+
+The source-build HIP route is:
+
+    $env:CMAKE_ARGS = "-DGGML_HIP=on"
+    python -m pip install "oaa[gguf]"
+
+For NVIDIA CUDA source builds:
+
+    $env:CMAKE_ARGS = "-DGGML_CUDA=on"
+    python -m pip install "oaa[gguf]"
+
+These are build configurations, not guarantees that a particular GPU, driver or Windows toolchain is supported. Check the current [official llama-cpp-python install guide](https://pypi.org/project/llama-cpp-python/) for wheel availability and platform requirements. If GPU builds fail, install CPU support first and run the model with `--n-gpu-layers 0`.
 
 ## Commands
 
