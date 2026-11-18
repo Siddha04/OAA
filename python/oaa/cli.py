@@ -666,6 +666,82 @@ def run_runtime_info(args: argparse.Namespace) -> int:
     return 0
 
 
+def _load_gguf_backend(args: argparse.Namespace):
+    from .backends.llama_cpp import LlamaCppBackend
+
+    return LlamaCppBackend(
+        args.model,
+        n_ctx=args.n_ctx,
+        n_gpu_layers=args.n_gpu_layers,
+        n_threads=args.n_threads,
+        chat_format=args.chat_format,
+        verbose=args.verbose_backend,
+    )
+
+
+def run_gguf_ask(args: argparse.Namespace) -> int:
+    backend = _load_gguf_backend(args)
+    messages = [
+        {"role": "system", "content": args.system},
+        {"role": "user", "content": args.prompt},
+    ]
+    print(backend.chat(messages, build_config(args)))
+    return 0
+
+
+def run_gguf_chat(args: argparse.Namespace) -> int:
+    if args.max_history_messages <= 0:
+        raise ValueError("max-history-messages must be greater than zero")
+    backend = _load_gguf_backend(args)
+    system_message = {"role": "system", "content": args.system}
+    messages = [system_message]
+    config = build_config(args)
+    print("OAA GGUF chat. Commands: /reset, /exit")
+
+    while True:
+        try:
+            user_input = input("you> ")
+        except EOFError:
+            print()
+            return 0
+        except KeyboardInterrupt:
+            print()
+            return 0
+
+        prompt = user_input.strip()
+        if not prompt:
+            continue
+        if prompt == "/exit":
+            return 0
+        if prompt == "/reset":
+            messages = [system_message]
+            print("session reset")
+            continue
+
+        messages.append({"role": "user", "content": prompt})
+        response_parts: list[str] = []
+        try:
+            print("oaa> ", end="", flush=True)
+            for chunk in backend.chat_stream(messages, config):
+                response_parts.append(chunk)
+                print(chunk, end="", flush=True)
+            print()
+        except (RuntimeError, ValueError, TypeError) as exc:
+            messages.pop()
+            print(f"error: {exc}", file=sys.stderr)
+            continue
+
+        messages.append({"role": "assistant", "content": "".join(response_parts)})
+        if len(messages) > args.max_history_messages + 1:
+            messages = [system_message] + messages[-args.max_history_messages:]
+
+
+def run_gguf_info(args: argparse.Namespace) -> int:
+    backend = _load_gguf_backend(args)
+    print(json.dumps(backend.model_info, ensure_ascii=False, allow_nan=False, indent=2))
+    return 0
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
