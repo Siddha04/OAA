@@ -18,6 +18,7 @@ class BackendCapabilities:
     model_family: str
     modalities: tuple[str, ...] = ("text",)
     pretrained_weights_loaded: bool = False
+    checkpoint_loaded: bool = False
     true_streaming: bool = False
     structured_tool_calls: bool = False
     quantization: str = "unknown"
@@ -38,7 +39,7 @@ class BackendCapabilities:
         if len(set(modalities)) != len(modalities):
             raise ValueError("modalities must not contain duplicates")
         object.__setattr__(self, "modalities", modalities)
-        for name in ("pretrained_weights_loaded", "true_streaming", "structured_tool_calls"):
+        for name in ("pretrained_weights_loaded", "checkpoint_loaded", "true_streaming", "structured_tool_calls"):
             if not isinstance(getattr(self, name), bool):
                 raise TypeError(f"{name} must be a boolean")
         if not isinstance(self.quantization, str) or not self.quantization.strip():
@@ -56,6 +57,7 @@ class BackendCapabilities:
             "model_family": self.model_family,
             "modalities": list(self.modalities),
             "pretrained_weights_loaded": self.pretrained_weights_loaded,
+            "checkpoint_loaded": self.checkpoint_loaded,
             "true_streaming": self.true_streaming,
             "structured_tool_calls": self.structured_tool_calls,
             "quantization": self.quantization,

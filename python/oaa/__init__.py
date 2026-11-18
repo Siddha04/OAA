@@ -2,6 +2,7 @@
 
 from .assistant import PersonalAssistant
 from .backend import BackendCapabilities, GenerationResult, GenerationService, RuntimeEngineBackend
+from .backends import LlamaCppBackend
 from .config import GenerationConfig
 from .cuda import available as cuda_available
 from .cuda import compiled as cuda_compiled
@@ -18,6 +19,7 @@ __all__ = [
     "GenerationResult",
     "GenerationService",
     "RuntimeEngineBackend",
+    "LlamaCppBackend",
     "ChatMessage",
     "ChatSession",
     "cuda_available",
@@ -32,4 +34,4 @@ __all__ = [
     "synthesize_speech",
     "write_wav",
 ]
-__version__ = "0.12.0"
+__version__ = "0.13.0"
